@@ -83,7 +83,7 @@ if sys.version_info < (2, 7):
     sys.exit(1)
 
 #
-# Read Config from config.ini file
+# Read Config from .upload.ini file
 #
 
 config = ConfigParser.ConfigParser()
@@ -614,6 +614,11 @@ class Uploadr:
                         file_id = int(search_result["photos"]["photo"][0]["id"])
                     else:
                         file_id = int(str(res.getElementsByTagName('photoid')[0].firstChild.nodeValue))
+                    #Add tags to file
+                    if FULL_SET_NAME:
+                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y/%m/%d')))
+                    else:
+                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')))
                     Ext = os.path.splitext(file)[1].lower()
                     if Ext == '.mov':
                         print "*****Is .mov file, add Date Taken******"
@@ -876,7 +881,7 @@ class Uploadr:
 
             for row in files:
                 if FULL_SET_NAME:
-                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
+                    setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
 #                    setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
                 else:
 #                    head, setName = os.path.split(os.path.dirname(row[1]))
@@ -1138,7 +1143,21 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": ','.join(tags)
         }
+        url = self.urlGen(api.rest, data, self.signCall(data))
+        return self.getResponse(url)
 
+    def photos_add_tag(self, photo_id, tags):
+#        tags = [tag.replace(',', '') for tag in tags]
+        data = {
+            "auth_token": str(self.token),
+            "perms": str(self.perms),
+            "format": "json",
+            "nojsoncallback": "1",
+            "method": "flickr.photos.addTags",
+            "photo_id": str(photo_id),
+            "tags": tags
+        }
+        print "*****Add tag "+ tags +"*****" 
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
