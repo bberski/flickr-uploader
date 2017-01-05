@@ -71,6 +71,10 @@ import subprocess
 import re
 import ConfigParser
 from multiprocessing.pool import ThreadPool
+#BBerski
+import datetime
+import struct
+import logging
 
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
@@ -83,7 +87,7 @@ if sys.version_info < (2, 7):
 #
 
 config = ConfigParser.ConfigParser()
-config.read(os.path.join(os.path.dirname(sys.argv[0]), "uploadr.ini"))
+config.read(os.path.join(os.path.dirname(sys.argv[0]), ".uploadr.ini"))
 FILES_DIR = eval(config.get('Config', 'FILES_DIR'))
 FLICKR = eval(config.get('Config', 'FLICKR'))
 SLEEP_TIME = eval(config.get('Config', 'SLEEP_TIME'))
@@ -123,6 +127,45 @@ class APIConstants:
 api = APIConstants()
 
 
+def movdate(inmov):
+	dict = {}
+#	import datetime
+#	print "INMOV", inmov
+	ATOM_HEADER_SIZE = 8
+	# difference between Unix epoch and QuickTime epoch, in seconds
+	EPOCH_ADJUSTER = 2082844800
+	f = open(inmov, "rb")
+	
+	#f = inmov
+	while 1:
+	    atom_header = f.read(ATOM_HEADER_SIZE)
+	    if atom_header[4:8] == 'moov':
+	        break
+	    else:
+	        atom_size = struct.unpack(">I", atom_header[0:4])[0]
+	        f.seek(atom_size - 8, 1)
+	
+	# found 'moov', look for 'mvhd' and timestamps
+	atom_header = f.read(ATOM_HEADER_SIZE)
+	if atom_header[4:8] == 'cmov':
+	    print "moov atom is compressed"
+	elif atom_header[4:8] != 'mvhd':
+	    print "expected to find 'mvhd' header"
+	else:
+	    f.seek(4, 1)
+	    creation_date = struct.unpack(">I", f.read(4))[0]
+	    modification_date = struct.unpack(">I", f.read(4))[0]
+	    create_date = datetime.datetime.utcfromtimestamp(creation_date - EPOCH_ADJUSTER)
+	    mod_date = datetime.datetime.utcfromtimestamp(modification_date - EPOCH_ADJUSTER)
+	    dict['EXIF DateTimeDigitized'] = create_date
+	    dict['EXIF DatePosted'] = mod_date
+#	    print "CD", create_date
+#	    print "MD", mod_date
+	    return dict
+
+
+
+
 class Uploadr:
     """ Uploadr class
     """
@@ -134,7 +177,6 @@ class Uploadr:
         """ Constructor
         """
         self.token = self.getCachedToken()
-
 
 
     def signCall(self, data):
@@ -439,7 +481,7 @@ class Uploadr:
                                 flag = "JpgFromRaw"
 
                             command = RAW_TOOL_PATH + "exiftool -b -" + flag + " -w .JPG -ext " + ext + " -r '" + dirpath + "/" + filename + "." + fileExt + "'"
-                            # print(command)
+                            print(command)
 
                             p = subprocess.call(command, shell=True)
 
@@ -447,7 +489,7 @@ class Uploadr:
                             print ("About to copy tags from " + dirpath + "/" + f + " to JPG.")
 
                             command = RAW_TOOL_PATH + "exiftool -tagsfromfile '" + dirpath + "/" + f + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
-                            # print(command)
+                            print(command)
 
                             p = subprocess.call(command, shell=True)
 
@@ -533,7 +575,6 @@ class Uploadr:
                     d["api_sig"] = sig
                     d["api_key"] = FLICKR["api_key"]
                     url = self.build_request(api.upload, d, (photo,))
-
                     res = None
                     search_result = None
                     for x in range(0, MAX_UPLOAD_ATTEMPTS):
@@ -573,7 +614,13 @@ class Uploadr:
                         file_id = int(search_result["photos"]["photo"][0]["id"])
                     else:
                         file_id = int(str(res.getElementsByTagName('photoid')[0].firstChild.nodeValue))
-
+                    Ext = os.path.splitext(file)[1].lower()
+                    if Ext == '.mov':
+                        print "*****Is .mov file, add Date Taken******"
+                        exiftags = movdate(file)
+                        dateTaken = str(exiftags['EXIF DateTimeDigitized'])
+                        res_mod_date = flick.photos_mod_date(file_id, dateTaken)
+                        print "Result mod datetaken ", res_mod_date['stat']
                     # Add to db
                     cur.execute(
                         'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
@@ -816,17 +863,12 @@ class Uploadr:
             time.sleep(SLEEP_TIME)
 
     def createSets(self):
-
         print('*****Creating Sets*****')
-
         if args.dry_run :
                 return True
-
-
         con = lite.connect(DB_PATH)
         con.text_factory = str
         with con:
-
             cur = con.cursor()
             cur.execute("SELECT files_id, path, set_id FROM files")
 
@@ -834,9 +876,11 @@ class Uploadr:
 
             for row in files:
                 if FULL_SET_NAME:
-                    setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
+                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
+#                    setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
                 else:
-                    head, setName = os.path.split(os.path.dirname(row[1]))
+#                    head, setName = os.path.split(os.path.dirname(row[1]))
+                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
                 newSetCreated = False
 
                 cur.execute("SELECT set_id, name FROM sets WHERE name = ?", (setName,))
@@ -1111,6 +1155,20 @@ class Uploadr:
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
+    def photos_mod_date(self, photo_id, mod_date):
+        data = {
+            "auth_token": str(self.token),
+            "perms": str(self.perms),
+            "format": "json",
+            "nojsoncallback": "1",
+            "method": "flickr.photos.setDates",
+            "date_taken": str( mod_date ),
+            "photo_id": str(photo_id),
+        }
+        print("*****Update date_taken*****")
+        url = self.urlGen(api.rest, data, self.signCall(data))
+        return self.getResponse(url)
+
     def photos_remove_tag(self, tag_id):
         data = {
             "auth_token": str(self.token),
@@ -1146,6 +1204,16 @@ class Uploadr:
 
 print("--------- Start time: " + time.strftime("%c") + " ---------")
 if __name__ == "__main__":
+    '''
+    logging.basicConfig(level=logging.DEBUG,
+                format='%(asctime)s %(levelname)s %(filename)s:%(lineno)s - %(funcName)20s() %(message)s',
+                filename='debug.log',
+                filemode='w')
+    logging.debug('Started')
+    errors = logging.FileHandler('error.log')
+    errors.setLevel(logging.ERROR)
+    logging.getLogger('').addHandler(errors)
+    '''
     # Ensure that only once instance of this script is running
     f = open(LOCK_PATH, 'w')
     try:
