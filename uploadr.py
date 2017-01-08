@@ -74,7 +74,8 @@ from multiprocessing.pool import ThreadPool
 #BBerski
 import datetime
 import struct
-import logging
+#import logging
+import traceback
 
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
@@ -543,6 +544,7 @@ class Uploadr:
             row = cur.fetchone()
 
             last_modified = os.stat(file).st_mtime;
+
             if row is None:
                 print("Uploading " + file + "...")
 
@@ -577,12 +579,24 @@ class Uploadr:
                     url = self.build_request(api.upload, d, (photo,))
                     res = None
                     search_result = None
+                    search_result2 = self.photos_search(file_checksum)
+                    if int(search_result2["photos"]["total"]) > 0:
+                        print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
+                        file_id = int(search_result2["photos"]["photo"][0]["id"])
+                        print "Insert to DB"
+                        cur.execute(
+                            'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
+                            (file_id, file, file_checksum, last_modified))
+                        success = True
+                        return
+                    else:
+                        search_result2 = None
                     for x in range(0, MAX_UPLOAD_ATTEMPTS):
                         try:
                             res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
                             search_result = None
                             break
-                        except (IOError, httplib.HTTPException):
+                        except (IOError, httplib.HTTPException): #Om uppladdning misslyckas, kolla om filen kommit upp.
                             print(str(sys.exc_info()))
                             print("Check is file already uploaded")
                             time.sleep(5)
@@ -603,13 +617,14 @@ class Uploadr:
 
                             if int(search_result["photos"]["total"]) == 1:
                                 break
-
+                    search_result = self.photos_search(file_checksum)
                     if not search_result and res.documentElement.attributes['stat'].value != "ok":
                         print("A problem occurred while attempting to upload the file: " + file)
                         raise IOError(str(res.toxml()))
 
                     print("Successfully uploaded the file: " + file)
-
+                    if int(search_result["photos"]["total"]) == 0:
+                        search_result = None
                     if search_result:
                         file_id = int(search_result["photos"]["photo"][0]["id"])
                     else:
@@ -666,7 +681,6 @@ class Uploadr:
             res = None
             res_add_tag = None
             res_get_info = None
-
             for x in range(0, MAX_UPLOAD_ATTEMPTS):
                 try:
                     res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
@@ -1103,6 +1117,8 @@ class Uploadr:
         }
 
         url = self.urlGen(api.rest, data, self.signCall(data))
+#        print "PHOTOSEARCH ",checksum
+#        print "URL", url
         return self.getResponse(url)
 
     def people_get_photos(self):
@@ -1157,7 +1173,7 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": tags
         }
-        print "*****Add tag "+ tags +"*****" 
+        print "*****Add tag "+ str(tags) +"*****" 
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
@@ -1184,7 +1200,7 @@ class Uploadr:
             "date_taken": str( mod_date ),
             "photo_id": str(photo_id),
         }
-        print("*****Update date_taken*****")
+        print("*****Update date_taken "+ str(mod_date) +"*****")
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
@@ -1285,9 +1301,10 @@ if __name__ == "__main__":
         flick.getFlickrSets()
         flick.convertRawFiles()
         flick.upload()
-        flick.removeDeletedMedia()
-        if args.remove_ignored:
-            flick.removeIgnoredMedia()
+#        flick.removeDeletedMedia()
+#        if args.remove_ignored:
+#            flick.removeIgnoredMedia()
+        print("*****Removing deleted files INACTIVE *****")
         flick.createSets()
         flick.print_stat()
 
