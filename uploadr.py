@@ -107,6 +107,10 @@ CONVERT_RAW_FILES = eval(config.get('Config', 'CONVERT_RAW_FILES'))
 FULL_SET_NAME = eval(config.get('Config', 'FULL_SET_NAME'))
 SOCKET_TIMEOUT = eval(config.get('Config', 'SOCKET_TIMEOUT'))
 MAX_UPLOAD_ATTEMPTS = eval(config.get('Config', 'MAX_UPLOAD_ATTEMPTS'))
+SKIP_CREATE_SET_EXIST = eval(config.get('Config', 'SKIP_CREATE_SET_EXIST'))
+REMOVE_DELETE_FLICKR = eval(config.get('Config', 'REMOVE_DELETE_FLICKR'))
+
+skip_create_set = "None"
 
 
 class APIConstants:
@@ -127,7 +131,6 @@ class APIConstants:
 
 api = APIConstants()
 
-skip_create_set = "None"
 
 def movdate(infile_id, inmov, inlast_modified):
 #http://stackoverflow.com/questions/21355316/getting-metadata-for-mov-video
@@ -140,7 +143,7 @@ def movdate(infile_id, inmov, inlast_modified):
     #-3600 , add 1 hour
 	EPOCH_ADJUSTER = 2082844800-3600
 	f = open(inmov, "rb")
-	
+
 	#f = inmov
 	while 1:
 	    atom_header = f.read(ATOM_HEADER_SIZE)
@@ -149,7 +152,7 @@ def movdate(infile_id, inmov, inlast_modified):
 	    else:
 	        atom_size = struct.unpack(">I", atom_header[0:4])[0]
 	        f.seek(atom_size - 8, 1)
-	
+
 	# found 'moov', look for 'mvhd' and timestamps
 	atom_header = f.read(ATOM_HEADER_SIZE)
 	if atom_header[4:8] == 'cmov':
@@ -172,7 +175,7 @@ def movdate(infile_id, inmov, inlast_modified):
             print("Error setting date")
         if res_set_date['stat'] != 'ok':
             raise IOError(res_set_date)
-        print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + str(create_date))                    
+        print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + str(create_date))
 
 
 def movdate2(infile_id, inmov, inlast_modified):
@@ -192,7 +195,7 @@ def movdate2(infile_id, inmov, inlast_modified):
 			print("Error setting date")
 		if res_set_date['stat'] != 'ok':
 			raise IOError(res_set_date)
-		print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + video_date)                    
+		print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + video_date)
 
 
 class Uploadr:
@@ -546,7 +549,7 @@ class Uploadr:
                     if (fileSize < FILE_MAX_SIZE):
                         files.append(os.path.normpath(dirpath + "/" + f).replace("'", "\'"))
                     else:
-                        print("Skipping file due to size restriction: " + ( os.path.normpath( dirpath.encode('utf-8') + "/" + f.encode('utf-8') ) ) )                        
+                        print("Skipping file due to size restriction: " + ( os.path.normpath( dirpath.encode('utf-8') + "/" + f.encode('utf-8') ) ) )
         files.sort()
         return files
 
@@ -554,13 +557,13 @@ class Uploadr:
         for excluded_dir in EXCLUDED_FOLDERS:
             if excluded_dir in os.path.dirname(filename):
                 return True
-        
+
         return False
 
     def uploadFile(self, file):
         """ uploadFile
         """
-        global skip_create_set 
+        global skip_create_set
 	if args.dry_run :
 		print("Dry Run Uploading " + file + "...")
 		return True
@@ -1203,7 +1206,7 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": tags
         }
-        print "*****Add tag "+ str(tags) +"*****" 
+        print "*****Add tag "+ str(tags) +"*****"
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
@@ -1319,7 +1322,7 @@ if __name__ == "__main__":
                         help='Dry run')
     parser.add_argument('-g', '--remove-ignored', action='store_true',
                         help='Remove previously uploaded files, now ignored')
-    args = parser.parse_args() 
+    args = parser.parse_args()
     print args.dry_run
 
     flick = Uploadr()
@@ -1345,14 +1348,21 @@ if __name__ == "__main__":
         flick.getFlickrSets()
         flick.convertRawFiles()
         flick.upload()
-#        flick.removeDeletedMedia()
-#        if args.remove_ignored:
-#            flick.removeIgnoredMedia()
-        print("*****Removing deleted files INACTIVE*****")
-        if skip_create_set == "None":
-            flick.createSets()
+        if REMOVE_DELETE_FLICKR == True:
+            flick.removeDeletedMedia()
+            if args.remove_ignored:
+                flick.removeIgnoredMedia()
         else:
-            print "*****Skipping creating/add sets*****"
+            print("*****Removing deleted files INACTIVE*****")
+#        print "SCS", SKIP_CREATE_SET_EXIST
+#        print "scs", skip_create_set
+        if SKIP_CREATE_SET_EXIST:
+            if skip_create_set == "None":
+                flick.createSets()
+            else:
+                print "*****Skipping creating/add sets*****"
+        else:
+            flick.createSets()
         flick.print_stat()
 
 
