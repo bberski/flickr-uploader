@@ -75,7 +75,7 @@ from multiprocessing.pool import ThreadPool
 import datetime
 import struct
 #import logging
-import traceback
+#import traceback
 
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
@@ -127,14 +127,18 @@ class APIConstants:
 
 api = APIConstants()
 
+skip_create_set = "None"
 
-def movdate(inmov):
-	dict = {}
+def movdate(infile_id, inmov, inlast_modified):
+#http://stackoverflow.com/questions/21355316/getting-metadata-for-mov-video
+
+#	dict = {}
 #	import datetime
 #	print "INMOV", inmov
 	ATOM_HEADER_SIZE = 8
 	# difference between Unix epoch and QuickTime epoch, in seconds
-	EPOCH_ADJUSTER = 2082844800
+    #-3600 , add 1 hour
+	EPOCH_ADJUSTER = 2082844800-3600
 	f = open(inmov, "rb")
 	
 	#f = inmov
@@ -158,13 +162,37 @@ def movdate(inmov):
 	    modification_date = struct.unpack(">I", f.read(4))[0]
 	    create_date = datetime.datetime.utcfromtimestamp(creation_date - EPOCH_ADJUSTER)
 	    mod_date = datetime.datetime.utcfromtimestamp(modification_date - EPOCH_ADJUSTER)
-	    dict['EXIF DateTimeDigitized'] = create_date
-	    dict['EXIF DatePosted'] = mod_date
-#	    print "CD", create_date
-#	    print "MD", mod_date
-	    return dict
+        print "*****It is a .mov file, add Date Taken******"
+        try:
+            res_set_date = flick.photos_set_dates(infile_id, create_date)
+            if res_set_date['stat'] == 'ok':
+                print("Set date ok")
+        except (IOError, ValueError, httplib.HTTPException):
+            print(str(sys.exc_info()))
+            print("Error setting date")
+        if res_set_date['stat'] != 'ok':
+            raise IOError(res_set_date)
+        print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + str(create_date))                    
 
 
+def movdate2(infile_id, inmov, inlast_modified):
+	# Update Date/Time on Flickr for Video files
+	# Based on file's date not meta
+	import mimetypes
+	import time
+	filetype = mimetypes.guess_type(inmov)
+	if 'video' in filetype[0]:
+		video_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(inlast_modified))
+		try:
+			res_set_date = flick.photos_set_dates(infile_id, video_date)
+			if res_set_date['stat'] == 'ok':
+				print("Set date ok")
+		except (IOError, ValueError, httplib.HTTPException):
+			print(str(sys.exc_info()))
+			print("Error setting date")
+		if res_set_date['stat'] != 'ok':
+			raise IOError(res_set_date)
+		print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + video_date)                    
 
 
 class Uploadr:
@@ -517,6 +545,8 @@ class Uploadr:
                     fileSize = os.path.getsize(dirpath + "/" + f)
                     if (fileSize < FILE_MAX_SIZE):
                         files.append(os.path.normpath(dirpath + "/" + f).replace("'", "\'"))
+                    else:
+                        print("Skipping file due to size restriction: " + ( os.path.normpath( dirpath.encode('utf-8') + "/" + f.encode('utf-8') ) ) )                        
         files.sort()
         return files
 
@@ -530,7 +560,7 @@ class Uploadr:
     def uploadFile(self, file):
         """ uploadFile
         """
-
+        global skip_create_set 
 	if args.dry_run :
 		print("Dry Run Uploading " + file + "...")
 		return True
@@ -582,6 +612,7 @@ class Uploadr:
                     search_result2 = self.photos_search(file_checksum)
                     if int(search_result2["photos"]["total"]) > 0:
                         print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
+                        skip_create_set = "True"
                         file_id = int(search_result2["photos"]["photo"][0]["id"])
                         print "Insert to DB"
                         cur.execute(
@@ -636,15 +667,12 @@ class Uploadr:
                         res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')))
                     Ext = os.path.splitext(file)[1].lower()
                     if Ext == '.mov':
-                        print "*****Is .mov file, add Date Taken******"
-                        exiftags = movdate(file)
-                        dateTaken = str(exiftags['EXIF DateTimeDigitized'])
-                        res_mod_date = flick.photos_mod_date(file_id, dateTaken)
-                        print "Result mod datetaken ", res_mod_date['stat']
+                        movdate(file_id, file, last_modified)
                     # Add to db
                     cur.execute(
                         'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
                         (file_id, file, file_checksum, last_modified))
+
                     success = True
                 except:
                     print(str(sys.exc_info()))
@@ -661,8 +689,8 @@ class Uploadr:
     def replacePhoto(self, file, file_id, oldFileMd5, fileMd5, last_modified, cur, con):
 
         if args.dry_run :
-		print("Dry Run Replace file " + file + "...")
-                return True
+            print("Dry Run Replace file " + file + "...")
+            return True
 
         success = False
         print("Replacing the file: " + file + "...")
@@ -677,7 +705,9 @@ class Uploadr:
             d["api_sig"] = sig
             d["api_key"] = FLICKR["api_key"]
             url = self.build_request(api.replace, d, (photo,))
-
+            Ext = os.path.splitext(file)[1].lower()
+            if Ext == '.mov':
+                movdate(file_id, file, last_modified)
             res = None
             res_add_tag = None
             res_get_info = None
@@ -1217,6 +1247,20 @@ class Uploadr:
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
+    # Update Date/Time on Flickr for Video files
+    def photos_set_dates(self, photo_id, datetxt):
+        data = {
+            "auth_token": str(self.token),
+            "perms": str(self.perms),
+            "format": "json",
+            "nojsoncallback": "1",
+            "method": "flickr.photos.setDates",
+            "photo_id": str(photo_id),
+            "date_taken": str(datetxt)
+        }
+        url = self.urlGen(api.rest, data, self.signCall(data))
+        return self.getResponse(url)
+
     def print_stat(self):
         con = lite.connect(DB_PATH)
         con.text_factory = str
@@ -1304,8 +1348,11 @@ if __name__ == "__main__":
 #        flick.removeDeletedMedia()
 #        if args.remove_ignored:
 #            flick.removeIgnoredMedia()
-        print("*****Removing deleted files INACTIVE *****")
-        flick.createSets()
+        print("*****Removing deleted files INACTIVE*****")
+        if skip_create_set == "None":
+            flick.createSets()
+        else:
+            print "*****Skipping creating/add sets*****"
         flick.print_stat()
 
 
