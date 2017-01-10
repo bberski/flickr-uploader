@@ -445,7 +445,7 @@ class Uploadr:
         print("*****Uploading files*****")
 
         allMedia = self.grabNewFiles()
-        
+
         # If managing changes, consider all files
         if MANAGE_CHANGES:
             changedMedia = allMedia
