@@ -110,7 +110,7 @@ MAX_UPLOAD_ATTEMPTS = eval(config.get('Config', 'MAX_UPLOAD_ATTEMPTS'))
 SKIP_CREATE_SET_EXIST = eval(config.get('Config', 'SKIP_CREATE_SET_EXIST'))
 REMOVE_DELETE_FLICKR = eval(config.get('Config', 'REMOVE_DELETE_FLICKR'))
 
-skip_create_set = "None"
+skip_create_set = "True"
 
 
 class APIConstants:
@@ -135,36 +135,33 @@ api = APIConstants()
 def movdate(infile_id, inmov, inlast_modified):
 #http://stackoverflow.com/questions/21355316/getting-metadata-for-mov-video
 
-#	dict = {}
-#	import datetime
-#	print "INMOV", inmov
-	ATOM_HEADER_SIZE = 8
-	# difference between Unix epoch and QuickTime epoch, in seconds
+    ATOM_HEADER_SIZE = 8
+    # difference between Unix epoch and QuickTime epoch, in seconds
     #-3600 , add 1 hour
-	EPOCH_ADJUSTER = 2082844800-3600
-	f = open(inmov, "rb")
+    EPOCH_ADJUSTER = 2082844800-3600
+    f = open(inmov, "rb")
 
-	#f = inmov
-	while 1:
-	    atom_header = f.read(ATOM_HEADER_SIZE)
-	    if atom_header[4:8] == 'moov':
-	        break
-	    else:
-	        atom_size = struct.unpack(">I", atom_header[0:4])[0]
-	        f.seek(atom_size - 8, 1)
+    #f = inmov
+    while 1:
+        atom_header = f.read(ATOM_HEADER_SIZE)
+        if atom_header[4:8] == 'moov':
+            break
+        else:
+            atom_size = struct.unpack(">I", atom_header[0:4])[0]
+            f.seek(atom_size - 8, 1)
 
-	# found 'moov', look for 'mvhd' and timestamps
-	atom_header = f.read(ATOM_HEADER_SIZE)
-	if atom_header[4:8] == 'cmov':
-	    print "moov atom is compressed"
-	elif atom_header[4:8] != 'mvhd':
-	    print "expected to find 'mvhd' header"
-	else:
-	    f.seek(4, 1)
-	    creation_date = struct.unpack(">I", f.read(4))[0]
-	    modification_date = struct.unpack(">I", f.read(4))[0]
-	    create_date = datetime.datetime.utcfromtimestamp(creation_date - EPOCH_ADJUSTER)
-	    mod_date = datetime.datetime.utcfromtimestamp(modification_date - EPOCH_ADJUSTER)
+    # found 'moov', look for 'mvhd' and timestamps
+    atom_header = f.read(ATOM_HEADER_SIZE)
+    if atom_header[4:8] == 'cmov':
+        print "moov atom is compressed"
+    elif atom_header[4:8] != 'mvhd':
+        print "expected to find 'mvhd' header"
+    else:
+        f.seek(4, 1)
+        creation_date = struct.unpack(">I", f.read(4))[0]
+        modification_date = struct.unpack(">I", f.read(4))[0]
+        create_date = datetime.datetime.utcfromtimestamp(creation_date - EPOCH_ADJUSTER)
+        mod_date = datetime.datetime.utcfromtimestamp(modification_date - EPOCH_ADJUSTER)
         print "*****It is a .mov file, add Date Taken******"
         try:
             res_set_date = flick.photos_set_dates(infile_id, create_date)
@@ -179,23 +176,23 @@ def movdate(infile_id, inmov, inlast_modified):
 
 
 def movdate2(infile_id, inmov, inlast_modified):
-	# Update Date/Time on Flickr for Video files
-	# Based on file's date not meta
-	import mimetypes
-	import time
-	filetype = mimetypes.guess_type(inmov)
-	if 'video' in filetype[0]:
-		video_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(inlast_modified))
-		try:
-			res_set_date = flick.photos_set_dates(infile_id, video_date)
-			if res_set_date['stat'] == 'ok':
-				print("Set date ok")
-		except (IOError, ValueError, httplib.HTTPException):
-			print(str(sys.exc_info()))
-			print("Error setting date")
-		if res_set_date['stat'] != 'ok':
-			raise IOError(res_set_date)
-		print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + video_date)
+    # Update Date/Time on Flickr for Video files
+    # Based on file's date not meta
+    import mimetypes
+    import time
+    filetype = mimetypes.guess_type(inmov)
+    if 'video' in filetype[0]:
+        video_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(inlast_modified))
+        try:
+            res_set_date = flick.photos_set_dates(infile_id, video_date)
+            if res_set_date['stat'] == 'ok':
+                print("Set date ok")
+        except (IOError, ValueError, httplib.HTTPException):
+            print(str(sys.exc_info()))
+            print("Error setting date")
+        if res_set_date['stat'] != 'ok':
+            raise IOError(res_set_date)
+        print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date:" + video_date)
 
 
 class Uploadr:
@@ -448,6 +445,7 @@ class Uploadr:
         print("*****Uploading files*****")
 
         allMedia = self.grabNewFiles()
+        
         # If managing changes, consider all files
         if MANAGE_CHANGES:
             changedMedia = allMedia
@@ -471,14 +469,16 @@ class Uploadr:
             count = 0
             for i, file in enumerate(changedMedia):
                 success = self.uploadFile(file)
+#                print "SET STATUS", skip_create_set
                 if args.drip_feed and success and i != changedMedia_count - 1:
                     print("Waiting " + str(DRIP_TIME) + " seconds before next upload")
                     time.sleep(DRIP_TIME)
-                count = count + 1;
+                if success:
+                    count = count + 1;
                 if (count % 100 == 0):
-                    print("   " + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
+                    print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
             if (count % 100 > 0):
-                print("   " + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
+                print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
 
         print("*****Completed uploading files*****")
 
@@ -542,6 +542,7 @@ class Uploadr:
                 if self.isFileIgnored(filePath):
                     continue
                 if any(ignored.search(f) for ignored in IGNORED_REGEX):
+                    print "Ignored", f
                     continue
                 ext = os.path.splitext(os.path.basename(f))[1][1:].lower()
                 if ext in ALLOWED_EXT:
@@ -564,9 +565,9 @@ class Uploadr:
         """ uploadFile
         """
         global skip_create_set
-	if args.dry_run :
-		print("Dry Run Uploading " + file + "...")
-		return True
+        if args.dry_run :
+            print("Dry Run Uploading " + file + "...")
+            return True
 
         success = False
         con = lite.connect(DB_PATH)
@@ -580,11 +581,16 @@ class Uploadr:
 
             if row is None:
                 print("Uploading " + file + "...")
-
+                if FULL_SET_NAME:
+                    setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                else:
+                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
+                '''
                 if FULL_SET_NAME:
                     setName = os.path.relpath(os.path.dirname(file), FILES_DIR)
                 else:
                     head, setName = os.path.split(os.path.dirname(file))
+                '''
                 try:
                     photo = ('photo', file.encode('utf-8'), open(file, 'rb').read())
                     if args.title:  # Replace
@@ -615,16 +621,16 @@ class Uploadr:
                     search_result2 = self.photos_search(file_checksum)
                     if int(search_result2["photos"]["total"]) > 0:
                         print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
-                        skip_create_set = "True"
                         file_id = int(search_result2["photos"]["photo"][0]["id"])
-                        print "Insert to DB"
-                        cur.execute(
-                            'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
-                            (file_id, file, file_checksum, last_modified))
-                        success = True
+#                        print "Insert to DB"
+#                        cur.execute(
+#                            'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
+#                            (file_id, file, file_checksum, last_modified))
+                        success = None
                         return
                     else:
                         search_result2 = None
+                        skip_create_set = "None"
                     for x in range(0, MAX_UPLOAD_ATTEMPTS):
                         try:
                             res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
@@ -663,11 +669,12 @@ class Uploadr:
                         file_id = int(search_result["photos"]["photo"][0]["id"])
                     else:
                         file_id = int(str(res.getElementsByTagName('photoid')[0].firstChild.nodeValue))
-                    #Add tags to file
+                    #Add tags to file, Special
+                    photo_name = os.path.basename(file)
                     if FULL_SET_NAME:
-                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y/%m/%d')))
+                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y/%m/%d')), file)
                     else:
-                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')))
+                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')), file)
                     Ext = os.path.splitext(file)[1].lower()
                     if Ext == '.mov':
                         movdate(file_id, file, last_modified)
@@ -679,7 +686,20 @@ class Uploadr:
                     success = True
                 except:
                     print(str(sys.exc_info()))
+
             elif (MANAGE_CHANGES):
+                file_checksum = self.md5Checksum(file)
+                search_result2 = self.photos_search(file_checksum)
+                if int(search_result2["photos"]["total"]) > 0:
+                    print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
+                    if skip_create_set == "None":
+                        skip_create_set = "None"
+                    else:
+                        skip_create_set = "True"
+#                    return
+                else:
+                    search_result2 = None
+                    skip_create_set = "None"
                 if (row[6] == None):
                     cur.execute('UPDATE files SET last_modified = ? WHERE files_id = ?', (last_modified, row[1]))
                     con.commit()
@@ -718,7 +738,8 @@ class Uploadr:
                 try:
                     res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
                     if res.documentElement.attributes['stat'].value == "ok":
-                        res_add_tag = self.photos_add_tags(file_id, ['checksum:{}'.format(fileMd5)])
+                        photo_name = os.path.basename(file)
+                        res_add_tag = self.photos_add_tags(file_id, ['checksum:{}'.format(fileMd5)], file)
                         if res_add_tag['stat'] == 'ok':
                             res_get_info = flick.photos_get_info(file_id)
                             if res_get_info['stat'] == 'ok':
@@ -947,8 +968,11 @@ class Uploadr:
                     setId = set[0]
 
                 if row[2] == None and newSetCreated == False:
-                    print("adding file to set " + row[1].decode('utf-8'))
+                    print("adding file to set: " + row[1].decode('utf-8') +" to "+setName.decode('utf-8'))
                     self.addFileToSet(setId, row, cur)
+#                else:
+#                    print("adding file to set: " + os.path.basename(row[1].decode('utf-8')) +" to "+setName.decode('utf-8'))
+
         print('*****Completed creating sets*****')
 
     def addFileToSet(self, setId, file, cur):
@@ -980,9 +1004,16 @@ class Uploadr:
                 if (res['code'] == 1):
                     print("Photoset not found, creating new set...")
                     if FULL_SET_NAME:
+                        setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                    else:
+                        setName = str(datetime.datetime.now().strftime('%Y%m%d'))
+                    '''
+
+                    if FULL_SET_NAME:
                         setName = os.path.relpath(os.path.dirname(file[1]), FILES_DIR)
                     else:
                         head, setName = os.path.split(os.path.dirname(file[1]))
+                    '''
                     con = lite.connect(DB_PATH)
                     con.text_factory = str
                     self.createSet(setName, file[0], cur, con)
@@ -1099,6 +1130,7 @@ class Uploadr:
             for row in allsets:
                 print("Set: " + str(row[0]) + "(" + row[1] + ")")
 
+
     # Get sets from Flickr
     def getFlickrSets(self):
         print('*****Adding Flickr Sets to DB*****')
@@ -1181,7 +1213,7 @@ class Uploadr:
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
-    def photos_add_tags(self, photo_id, tags):
+    def photos_add_tags(self, photo_id, tags, photo):
         tags = [tag.replace(',', '') for tag in tags]
         data = {
             "auth_token": str(self.token),
@@ -1192,10 +1224,11 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": ','.join(tags)
         }
+        print "*****Add tag "+ str(tags) +" to "+ str(photo) +"*****"
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
-    def photos_add_tag(self, photo_id, tags):
+    def photos_add_tag(self, photo_id, tags, photo):
 #        tags = [tag.replace(',', '') for tag in tags]
         data = {
             "auth_token": str(self.token),
@@ -1206,7 +1239,7 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": tags
         }
-        print "*****Add tag "+ str(tags) +"*****"
+        print "*****Add tag "+ str(tags) +" to "+ str(photo) +"*****"
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
@@ -1348,14 +1381,13 @@ if __name__ == "__main__":
         flick.getFlickrSets()
         flick.convertRawFiles()
         flick.upload()
+#        sys.exit()
         if REMOVE_DELETE_FLICKR == True:
             flick.removeDeletedMedia()
             if args.remove_ignored:
                 flick.removeIgnoredMedia()
         else:
             print("*****Removing deleted files INACTIVE*****")
-#        print "SCS", SKIP_CREATE_SET_EXIST
-#        print "scs", skip_create_set
         if SKIP_CREATE_SET_EXIST:
             if skip_create_set == "None":
                 flick.createSets()
