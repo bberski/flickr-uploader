@@ -1042,9 +1042,9 @@ class Uploadr:
                             setName = str(datetime.datetime.now().strftime('%Y%m%d'))
                     else:
                         if FULL_SET_NAME:
-                            setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
+                            setName = os.path.relpath(os.path.dirname(file[1]), FILES_DIR)
                         else:
-                            head, setName = os.path.split(os.path.dirname(row[1]))
+                            head, setName = os.path.split(os.path.dirname(file[1]))
                     con = lite.connect(DB_PATH)
                     con.text_factory = str
                     self.createSet(setName, file[0], cur, con)
