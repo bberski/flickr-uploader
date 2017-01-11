@@ -542,7 +542,7 @@ class Uploadr:
                 if self.isFileIgnored(filePath):
                     continue
                 if any(ignored.search(f) for ignored in IGNORED_REGEX):
-                    print "Ignored", f
+                    print "Ignored: ", f
                     continue
                 ext = os.path.splitext(os.path.basename(f))[1][1:].lower()
                 if ext in ALLOWED_EXT:
@@ -566,7 +566,7 @@ class Uploadr:
         """
         global skip_create_set
         if args.dry_run :
-            print("Dry Run Uploading " + file + "...")
+            print("Dry Run Uploading: " + file + "...")
             return True
 
         success = False
@@ -576,11 +576,15 @@ class Uploadr:
             cur = con.cursor()
             cur.execute("SELECT rowid,files_id,path,set_id,md5,tagged,last_modified FROM files WHERE path = ?", (file,))
             row = cur.fetchone()
-
             last_modified = os.stat(file).st_mtime;
-
+            file_checksum = self.md5Checksum(file)
+            search_result2 = self.photos_search(file_checksum)
+            if int(search_result2["photos"]["total"]) == 0 and row:
+                print "??? In DB but not on Flickr, fixit ...."
+                success = self.deleteFiledb(row)
+                row = None
             if row is None:
-                print("Uploading " + file + "...")
+                print("Uploading: " + file + "...")
                 if FULL_SET_NAME:
                     setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
                 else:
@@ -620,7 +624,7 @@ class Uploadr:
                     search_result = None
                     search_result2 = self.photos_search(file_checksum)
                     if int(search_result2["photos"]["total"]) > 0:
-                        print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
+                        print "Photo already exist on Flickr: "+ file +" md5="+ file_checksum
                         file_id = int(search_result2["photos"]["photo"][0]["id"])
 #                        print "Insert to DB"
 #                        cur.execute(
@@ -691,13 +695,14 @@ class Uploadr:
                 file_checksum = self.md5Checksum(file)
                 search_result2 = self.photos_search(file_checksum)
                 if int(search_result2["photos"]["total"]) > 0:
-                    print "Photo already exist on Flickr "+ file +" md5="+ file_checksum
+                    print "Photo already exist on Flickr: "+ file +" md5="+ file_checksum
                     if skip_create_set == "None":
                         skip_create_set = "None"
                     else:
                         skip_create_set = "True"
-#                    return
                 else:
+#                    if int(search_result2["photos"]["total"]) == 0 and row:
+#                        print "skumt, finns i DB men ej pa Flickr"
                     search_result2 = None
                     skip_create_set = "None"
                 if (row[6] == None):
@@ -837,6 +842,30 @@ class Uploadr:
             # If you get 'attempt to write a readonly database', set 'admin' as owner of the DB file (fickerdb) and 'users' as group
             print(str(sys.exc_info()))
         return success
+
+    def deleteFiledb(self, file):
+
+        if args.dry_run :
+            print("Deleting file in DB: " + file[2].decode('utf-8'))
+            return True
+
+        success = False
+        print("Deleting file in DB: " + file[2].decode('utf-8'))
+        con = lite.connect(DB_PATH)
+        con.text_factory = str
+        cur = con.cursor()
+        cur.execute("SELECT files_id FROM files WHERE files_id = ?", (file[1],))
+        row = cur.fetchone()
+        # Delete file record from the local db
+        cur.execute("DELETE FROM files WHERE files_id = ?", (file[1],))
+        con.commit()
+        print("Successful deletion in DB file: "+ file[2].decode('utf-8'))
+        success = True
+#        except:
+#            # If you get 'attempt to write a readonly database', set 'admin' as owner of the DB file (fickerdb) and 'users' as group
+#            print(str(sys.exc_info()))
+        return success
+
 
     def logSetCreation(self, setId, setName, primaryPhotoId, cur, con):
         print("adding set to log: " + setName.decode('utf-8'))
@@ -1304,7 +1333,7 @@ class Uploadr:
             cur = con.cursor()
             cur.execute("SELECT Count(*) FROM files")
 
-            print 'Total photos on local: {}'.format(cur.fetchone()[0])
+            print 'Total photos on local DB: {}'.format(cur.fetchone()[0])
 
         res = self.people_get_photos()
         if res["stat"] != "ok":
