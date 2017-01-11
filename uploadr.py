@@ -471,7 +471,7 @@ class Uploadr:
             count = 0
             for i, file in enumerate(changedMedia):
                 success = self.uploadFile(file)
-#                print "SET STATUS", skip_create_set
+                print "SET STATUS", skip_create_set
                 if args.drip_feed and success and i != changedMedia_count - 1:
                     print("Waiting " + str(DRIP_TIME) + " seconds before next upload")
                     time.sleep(DRIP_TIME)
