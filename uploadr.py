@@ -88,6 +88,7 @@ if sys.version_info < (2, 7):
 #
 
 config = ConfigParser.ConfigParser()
+# change .uploadr.ini to upload.ini
 config.read(os.path.join(os.path.dirname(sys.argv[0]), ".uploadr.ini"))
 FILES_DIR = eval(config.get('Config', 'FILES_DIR'))
 FLICKR = eval(config.get('Config', 'FLICKR'))
@@ -109,6 +110,7 @@ SOCKET_TIMEOUT = eval(config.get('Config', 'SOCKET_TIMEOUT'))
 MAX_UPLOAD_ATTEMPTS = eval(config.get('Config', 'MAX_UPLOAD_ATTEMPTS'))
 SKIP_CREATE_SET_EXIST = eval(config.get('Config', 'SKIP_CREATE_SET_EXIST'))
 REMOVE_DELETE_FLICKR = eval(config.get('Config', 'REMOVE_DELETE_FLICKR'))
+FULL_SET_NAME_NEW = eval(config.get('Config', 'FULL_SET_NAME_NEW'))
 
 skip_create_set = "True"
 
@@ -585,16 +587,16 @@ class Uploadr:
                 row = None
             if row is None:
                 print("Uploading: " + file + "...")
-                if FULL_SET_NAME:
-                    setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                if FULL_SET_NAME_NEW:
+                    if FULL_SET_NAME:
+                        setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                    else:
+                        setName = str(datetime.datetime.now().strftime('%Y%m%d'))
                 else:
-                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
-                '''
-                if FULL_SET_NAME:
-                    setName = os.path.relpath(os.path.dirname(file), FILES_DIR)
-                else:
-                    head, setName = os.path.split(os.path.dirname(file))
-                '''
+                    if FULL_SET_NAME:
+                        setName = os.path.relpath(os.path.dirname(file), FILES_DIR)
+                    else:
+                        head, setName = os.path.split(os.path.dirname(file))
                 try:
                     photo = ('photo', file.encode('utf-8'), open(file, 'rb').read())
                     if args.title:  # Replace
@@ -675,10 +677,11 @@ class Uploadr:
                         file_id = int(str(res.getElementsByTagName('photoid')[0].firstChild.nodeValue))
                     #Add tags to file, Special
                     photo_name = os.path.basename(file)
-                    if FULL_SET_NAME:
-                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y/%m/%d')), file)
-                    else:
-                        res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')), file)
+                    if FULL_SET_NAME_NEW:
+                        if FULL_SET_NAME:
+                            res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y/%m/%d')), file)
+                        else:
+                            res_add_tag = self.photos_add_tag(file_id, str(datetime.datetime.now().strftime('%Y%m%d')), file)
                     Ext = os.path.splitext(file)[1].lower()
                     if Ext == '.mov':
                         movdate(file_id, file, last_modified)
@@ -977,18 +980,19 @@ class Uploadr:
             files = cur.fetchall()
 
             for row in files:
-                if FULL_SET_NAME:
-                    setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
-#                    setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
+                if FULL_SET_NAME_NEW:
+                    if FULL_SET_NAME:
+                        setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                    else:
+                        setName = str(datetime.datetime.now().strftime('%Y%m%d'))
                 else:
-#                    head, setName = os.path.split(os.path.dirname(row[1]))
-                    setName = str(datetime.datetime.now().strftime('%Y%m%d'))
+                    if FULL_SET_NAME:
+                        setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
+                    else:
+                        head, setName = os.path.split(os.path.dirname(row[1]))
                 newSetCreated = False
-
                 cur.execute("SELECT set_id, name FROM sets WHERE name = ?", (setName,))
-
                 set = cur.fetchone()
-
                 if set == None:
                     setId = self.createSet(setName, row[0], cur, con)
                     print("Created the set: " + setName.decode('utf-8'))
@@ -1001,7 +1005,6 @@ class Uploadr:
                     self.addFileToSet(setId, row, cur)
 #                else:
 #                    print("adding file to set: " + os.path.basename(row[1].decode('utf-8')) +" to "+setName.decode('utf-8'))
-
         print('*****Completed creating sets*****')
 
     def addFileToSet(self, setId, file, cur):
@@ -1032,17 +1035,16 @@ class Uploadr:
             else:
                 if (res['code'] == 1):
                     print("Photoset not found, creating new set...")
-                    if FULL_SET_NAME:
-                        setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                    if FULL_SET_NAME_NEW:
+                        if FULL_SET_NAME:
+                            setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
+                        else:
+                            setName = str(datetime.datetime.now().strftime('%Y%m%d'))
                     else:
-                        setName = str(datetime.datetime.now().strftime('%Y%m%d'))
-                    '''
-
-                    if FULL_SET_NAME:
-                        setName = os.path.relpath(os.path.dirname(file[1]), FILES_DIR)
-                    else:
-                        head, setName = os.path.split(os.path.dirname(file[1]))
-                    '''
+                        if FULL_SET_NAME:
+                            setName = os.path.relpath(os.path.dirname(row[1]), FILES_DIR)
+                        else:
+                            head, setName = os.path.split(os.path.dirname(row[1]))
                     con = lite.connect(DB_PATH)
                     con.text_factory = str
                     self.createSet(setName, file[0], cur, con)
