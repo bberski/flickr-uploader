@@ -1,0 +1,3 @@
+INFO:root:---urllib2.URLError---
+INFO:root:https://api.flickr.com/services/rest/?photo_id=35675024360&format=json&perms=delete&auth_token=72157679183658886-33bf1e915aa68a2d&tags=IMG_4666&api_sig=242563b9d6b709f2ee04bf4da29ee088&nojsoncallback=1&api_key=ea171ec72efad4861edbd1684f9b6024&method=flickr.photos.addTags
+INFO:root:<urlopen error ('_ssl.c:574: The handshake operation timed out',)>

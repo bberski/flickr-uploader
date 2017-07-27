@@ -73,17 +73,9 @@ import re
 import ConfigParser
 from multiprocessing.pool import ThreadPool
 #BBerski
-#from ConfigParser import SafeConfigParser
 import datetime
 import struct
 import pyexiftool.exiftool as exiftool
-import config
-import logging
-# encoding=utf8
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-
 
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
@@ -92,228 +84,38 @@ if sys.version_info < (2, 7):
     sys.exit(1)
 
 #
-# Read Config from .uploadr.ini file
+# Read Config from .upload.ini file
 #
 
-# change .uploadr.ini to uploadr.ini
-
-
-def ppprintX (invar):
-    try:
-        print invar.split(".")[1],"=", eval(invar)
-    except Exception as e :
-        print invar.split(".")[1],"= None"
-
-def ppprint (invar):
-    print invar.split(".")[1],"=", eval(invar)
-
-
-def configfileread():
-
-
-#    if args.configfile :
-#        upload_ini = args.configfile
-#    else:
-#        upload_ini = ".uploadr.ini"
-#    print "Config File:", upload_ini
-
-#Global var
-    global FILES_DIR
-    global FLICKR
-    global SLEEP_TIME
-    global DRIP_TIME
-    global DB_PATH
-    global LOCK_PATH
-    global TOKEN_PATH
-    global EXCLUDED_FOLDERS
-    global IGNORED_REGEX
-    global ALLOWED_EXT
-    global RAW_EXT
-    global FILE_MAX_SIZE
-    global MANAGE_CHANGES
-    global RAW_TOOL_PATH
-    global CONVERT_RAW_FILES
-    global RAW_SKIP_CREATE_ORIGINAL
-    global FULL_SET_NAME
-    global SOCKET_TIMEOUT
-    global MAX_UPLOAD_ATTEMPTS
-    global REMOVE_DELETE_FLICKR
-    global FULL_SET_NAME_NEW
-    global TITLE_FILENAME
-    global TAG_FILENAME
-    global TAG_SETNAME
-    global WAIT_NEXT_UPLOAD
-    global SET_TYPE
-    global CHECK_LOCAL_MD5CHECKSUM
-    global MAX_UPLOADFILES
-    global DAEMON
-    global DRY_RUN
-    global PROCESSES
-    global ALBUM
-    global DRIP_FEED
-    global TITLE
-    global DESCRIPTION
-    global TAGS
-    
-
-#    try:
-#        config = ConfigParser.SafeConfigParser()
-#        config.read(os.path.join(os.path.dirname(sys.argv[0]), upload_ini))
-#    except ConfigParser.ParsingError, err:
-#        print 'Could not parse:', err
-
-
-
-
-#    FILES_DIR = eval(config.get('Config', 'FILES_DIR'))
-#    FLICKR = eval(config.get('Config', 'FLICKR'))
-#    SLEEP_TIME = eval(config.get('Config', 'SLEEP_TIME'))
-#    DRIP_TIME = eval(config.get('Config', 'DRIP_TIME'))
-#    DB_PATH = eval(config.get('Config', 'DB_PATH'))
-#    LOCK_PATH = eval(config.get('Config', 'LOCK_PATH'))
-#    TOKEN_PATH = eval(config.get('Config', 'TOKEN_PATH'))
-#    EXCLUDED_FOLDERS = eval(config.get('Config', 'EXCLUDED_FOLDERS'))
-#    IGNORED_REGEX = [re.compile(regex) for regex in eval(config.get('Config', 'IGNORED_REGEX'))]
-#    ALLOWED_EXT = eval(config.get('Config', 'ALLOWED_EXT'))
-#    RAW_EXT = eval(config.get('Config', 'RAW_EXT'))
-#    FILE_MAX_SIZE = eval(config.get('Config', 'FILE_MAX_SIZE'))
-#    MANAGE_CHANGES = eval(config.get('Config', 'MANAGE_CHANGES'))
-#    RAW_TOOL_PATH = eval(config.get('Config', 'RAW_TOOL_PATH'))
-#    CONVERT_RAW_FILES = eval(config.get('Config', 'CONVERT_RAW_FILES'))
-#    RAW_SKIP_CREATE_ORIGINAL = eval(config.get('Config', 'RAW_SKIP_CREATE_ORIGINAL'))
-#    FULL_SET_NAME = eval(config.get('Config', 'FULL_SET_NAME'))
-#    SOCKET_TIMEOUT = eval(config.get('Config', 'SOCKET_TIMEOUT'))
-#    MAX_UPLOAD_ATTEMPTS = eval(config.get('Config', 'MAX_UPLOAD_ATTEMPTS'))
-#    REMOVE_DELETE_FLICKR = eval(config.get('Config', 'REMOVE_DELETE_FLICKR'))
-#    FULL_SET_NAME_NEW = eval(config.get('Config', 'FULL_SET_NAME_NEW'))
-#    TITLE_FILENAME = eval(config.get('Config', 'TITLE_FILENAME'))
-#    TAG_FILENAME = eval(config.get('Config', 'TAG_FILENAME'))
-#    TAG_SETNAME = eval(config.get('Config', 'TAG_SETNAME'))
-#    WAIT_NEXT_UPLOAD = eval(config.get('Config', 'WAIT_NEXT_UPLOAD'))
-#    SET_TYPE = eval(config.get('Config', 'SET_TYPE'))
-#    CHECK_LOCAL_MD5CHECKSUM = eval(config.get('Config', 'CHECK_LOCAL_MD5CHECKSUM'))
-
-    
-    ppprint("args.FILES_DIR")
-    ppprint("args.FLICKR")
-    ppprint("args.SLEEP_TIME")
-    ppprint("args.DRIP_TIME")
-    ppprint("args.DB_PATH")
-    ppprint("args.LOCK_PATH")
-    ppprint("args.TOKEN_PATH")
-    ppprint("args.EXCLUDED_FOLDERS")
-    ppprint("args.IGNORED_REGEX")
-    ppprint("args.ALLOWED_EXT")
-    ppprint("args.RAW_EXT")
-    ppprint("args.FILE_MAX_SIZE")
-    ppprint("args.MANAGE_CHANGES")
-    ppprint("args.RAW_TOOL_PATH")
-    ppprint("args.CONVERT_RAW_FILES")
-    ppprint("args.RAW_SKIP_CREATE_ORIGINAL")
-    ppprint("args.FULL_SET_NAME")
-    ppprint("args.SOCKET_TIMEOUT")
-    ppprint("args.MAX_UPLOAD_ATTEMPTS")
-    ppprint("args.REMOVE_DELETE_FLICKR")
-    ppprint("args.FULL_SET_NAME_NEW")
-    ppprint("args.TITLE_FILENAME")
-    ppprint("args.TAG_FILENAME")
-    ppprint("args.TAG_SETNAME")
-    ppprint("args.WAIT_NEXT_UPLOAD")
-    ppprint("args.SET_TYPE")
-    ppprint("args.CHECK_LOCAL_MD5CHECKSUM")
-    ppprint("args.TITLE")
-    ppprint("args.DAEMON")
-    ppprint("args.DESCRIPTION")
-    ppprint("args.TAGS")
-    ppprint("args.DRIP_FEED")
-    ppprint("args.PROCESSES")
-    ppprint("args.DRY_RUN")
-    ppprint("args.REMOVE_IGNORED")
-    ppprint("args.MAX_UPLOADFILES")
-    ppprint("args.ALBUM")
-
-
-
-    FILES_DIR = args.FILES_DIR
-    FLICKR=eval(args.FLICKR)
-    SLEEP_TIME=eval(args.SLEEP_TIME)
-    DRIP_TIME=eval(args.DRIP_TIME)
-    DB_PATH=eval(args.DB_PATH)
-    LOCK_PATH=eval(args.LOCK_PATH)
-    TOKEN_PATH=eval(args.TOKEN_PATH)
-    EXCLUDED_FOLDERS=eval(args.EXCLUDED_FOLDERS)
-    IGNORED_REGEX=[re.compile(regex) for regex in eval(args.IGNORED_REGEX)]
-    ALLOWED_EXT=eval(args.ALLOWED_EXT)
-    RAW_EXT=eval(args.RAW_EXT)
-    FILE_MAX_SIZE=eval(args.FILE_MAX_SIZE)
-    MANAGE_CHANGES=eval(args.MANAGE_CHANGES)
-    RAW_TOOL_PATH=eval(args.RAW_TOOL_PATH)
-    CONVERT_RAW_FILES=eval(args.CONVERT_RAW_FILES)
-    RAW_SKIP_CREATE_ORIGINAL=eval(args.RAW_SKIP_CREATE_ORIGINAL)
-    FULL_SET_NAME=eval(args.FULL_SET_NAME)
-    SOCKET_TIMEOUT=eval(args.SOCKET_TIMEOUT)
-    MAX_UPLOAD_ATTEMPTS=eval(args.MAX_UPLOAD_ATTEMPTS)
-    REMOVE_DELETE_FLICKR=eval(args.REMOVE_DELETE_FLICKR)
-    FULL_SET_NAME_NEW=eval(args.FULL_SET_NAME_NEW)
-    TITLE_FILENAME=eval(args.TITLE_FILENAME)
-    TAG_FILENAME=eval(args.TAG_FILENAME)
-    TAG_SETNAME=eval(args.TAG_SETNAME)
-    WAIT_NEXT_UPLOAD=eval(args.WAIT_NEXT_UPLOAD)
-    SET_TYPE=eval(args.SET_TYPE)
-    CHECK_LOCAL_MD5CHECKSUM=eval(args.CHECK_LOCAL_MD5CHECKSUM)
-    TITLE=args.TITLE
-    DAEMON=args.DAEMON
-    DESCRIPTION=args.DESCRIPTION
-    TAGS=args.TAGS
-    DRIP_FEED=args.DRIP_FEED
-    PROCESSES=args.PROCESSES
-    DRY_RUN=args.DRY_RUN
-    REMOVE_IGNORED=args.REMOVE_IGNORED
-    MAX_UPLOADFILES=args.MAX_UPLOADFILES
-    ALBUM=args.ALBUM
-
-    '''
-    FILES_DIR = args.FILES_DIR
-    FLICKR=eval(args.FLICKR)
-    SLEEP_TIME=eval(args.SLEEP_TIME)
-    DRIP_TIME=eval(args.DRIP_TIME)
-    DB_PATH=eval(args.DB_PATH)
-    LOCK_PATH=eval(args.LOCK_PATH)
-    TOKEN_PATH=eval(args.TOKEN_PATH)
-    EXCLUDED_FOLDERS=eval(args.EXCLUDED_FOLDERS)
-    IGNORED_REGEX=eval(args.IGNORED_REGEX)
-    ALLOWED_EXT=eval(args.ALLOWED_EXT)
-    RAW_EXT=eval(args.RAW_EXT)
-    FILE_MAX_SIZE=eval(args.FILE_MAX_SIZE)
-    MANAGE_CHANGES=args.MANAGE_CHANGES
-    RAW_TOOL_PATH=args.RAW_TOOL_PATH
-    CONVERT_RAW_FILES=args.CONVERT_RAW_FILES
-    RAW_SKIP_CREATE_ORIGINAL=args.RAW_SKIP_CREATE_ORIGINAL
-    FULL_SET_NAME=args.FULL_SET_NAME
-    SOCKET_TIMEOUT=eval(args.SOCKET_TIMEOUT)
-    MAX_UPLOAD_ATTEMPTS=args.MAX_UPLOAD_ATTEMPTS
-    REMOVE_DELETE_FLICKR=args.REMOVE_DELETE_FLICKR
-    FULL_SET_NAME_NEW=args.FULL_SET_NAME_NEW
-    TITLE_FILENAME=args.TITLE_FILENAME
-    TAG_FILENAME=args.TAG_FILENAME
-    TAG_SETNAME=args.TAG_SETNAME
-    WAIT_NEXT_UPLOAD=args.WAIT_NEXT_UPLOAD
-    SET_TYPE=args.SET_TYPE
-    CHECK_LOCAL_MD5CHECKSUM=args.CHECK_LOCAL_MD5CHECKSUM
-    TITLE=args.TITLE
-    DAEMON=args.DAEMON
-    DESCRIPTION=args.DESCRIPTION
-    TAGS=args.TAGS
-    DRIP_FEED=args.DRIP_FEED
-    PROCESSES=args.PROCESSES
-    DRY_RUN=args.DRY_RUN
-    REMOVE_IGNORED=args.REMOVE_IGNORED
-    MAX_UPLOADFILES=args.MAX_UPLOADFILES
-    ALBUM=args.ALBUM
-
-    '''
-
-#    sys.exit(0)
+config = ConfigParser.ConfigParser()
+# change .uploadr.ini to upload.ini
+config.read(os.path.join(os.path.dirname(sys.argv[0]), ".uploadr.ini"))
+FILES_DIR = eval(config.get('Config', 'FILES_DIR'))
+FLICKR = eval(config.get('Config', 'FLICKR'))
+SLEEP_TIME = eval(config.get('Config', 'SLEEP_TIME'))
+DRIP_TIME = eval(config.get('Config', 'DRIP_TIME'))
+DB_PATH = eval(config.get('Config', 'DB_PATH'))
+LOCK_PATH = eval(config.get('Config', 'LOCK_PATH'))
+TOKEN_PATH = eval(config.get('Config', 'TOKEN_PATH'))
+EXCLUDED_FOLDERS = eval(config.get('Config', 'EXCLUDED_FOLDERS'))
+IGNORED_REGEX = [re.compile(regex) for regex in eval(config.get('Config', 'IGNORED_REGEX'))]
+ALLOWED_EXT = eval(config.get('Config', 'ALLOWED_EXT'))
+RAW_EXT = eval(config.get('Config', 'RAW_EXT'))
+FILE_MAX_SIZE = eval(config.get('Config', 'FILE_MAX_SIZE'))
+MANAGE_CHANGES = eval(config.get('Config', 'MANAGE_CHANGES'))
+RAW_TOOL_PATH = eval(config.get('Config', 'RAW_TOOL_PATH'))
+CONVERT_RAW_FILES = eval(config.get('Config', 'CONVERT_RAW_FILES'))
+FULL_SET_NAME = eval(config.get('Config', 'FULL_SET_NAME'))
+SOCKET_TIMEOUT = eval(config.get('Config', 'SOCKET_TIMEOUT'))
+MAX_UPLOAD_ATTEMPTS = eval(config.get('Config', 'MAX_UPLOAD_ATTEMPTS'))
+REMOVE_DELETE_FLICKR = eval(config.get('Config', 'REMOVE_DELETE_FLICKR'))
+FULL_SET_NAME_NEW = eval(config.get('Config', 'FULL_SET_NAME_NEW'))
+TITLE_FILENAME = eval(config.get('Config', 'TITLE_FILENAME'))
+TAG_FILENAME = eval(config.get('Config', 'TAG_FILENAME'))
+TAG_SETNAME = eval(config.get('Config', 'TAG_SETNAME'))
+WAIT_NEXT_UPLOAD = eval(config.get('Config', 'WAIT_NEXT_UPLOAD'))
+SET_TYPE = eval(config.get('Config', 'SET_TYPE'))
+CHECK_LOCAL_MD5CHECKSUM = eval(config.get('Config', 'CHECK_LOCAL_MD5CHECKSUM'))
 
 
 #Fixar Lista
@@ -367,21 +169,6 @@ def parse_prefix(line, fmt):
     return t
 
 
-#try:
-#    import httplib
-#except:
-#    import http.client as httplib
-
-def have_internet():
-    conn = httplib.HTTPConnection("www.google.com", timeout=5)
-    try:
-        conn.request("HEAD", "/")
-        conn.close()
-        return True
-    except:
-        conn.close()
-        return False
-
 def movieCreateDate(infile_id, inmov, inlast_modified):
     create_date = getdate("EXIF:DateTimeOriginal", inmov)
     Type = "EXIF:DateTimeOriginal"
@@ -409,38 +196,8 @@ def movieCreateDate(infile_id, inmov, inlast_modified):
         print("Error setting date")
     if res_set_date['stat'] != 'ok':
         raise IOError(res_set_date)
+#    print("Successfully set date for pic number: " + str(infile_id) + " File: " + inmov.encode('utf-8') + " date: " + str(create_date))
     print("Successfully set date for file: " + inmov.encode('utf-8') + " date: " + str(create_date))
-
-def imageCreateDate(infile_id, inmov, inlast_modified):
-    create_date = getdate("EXIF:DateTimeOriginal", inmov)
-    Type = "EXIF:DateTimeOriginal"
-    if create_date:
-        print "EXIF:DateTimeOriginal OK ", inmov
-        return True
-    if not create_date:
-        create_date = getdate("CreateDate", inmov)
-        Type = "Create Date"
-    if not create_date:
-        create_date = getdate("FileModifyDate", inmov)
-        Type = "FileModifyDate"
-    else:
-        if not validate(create_date):
-            create_date = getdate("FileModifyDate", inmov)
-            Type = "FileModifyDate"
-    print "Find Date: "+ str(create_date) +", Type: "+ Type +", "+ inmov
-    print "*****It is a image file, add Date Taken******"
-    try:
-        create_date = parse_prefix(create_date, '%Y:%m:%d %H:%M:%S')
-        create_date = time.strftime('%Y-%m-%d %H:%M:%S', create_date)
-        res_set_date = flick.photos_set_dates(infile_id, create_date)
-    except (IOError, ValueError, httplib.HTTPException):
-        print(str(sys.exc_info()))
-        print("Error setting date")
-    if res_set_date['stat'] != 'ok':
-        raise IOError(res_set_date)
-    print("Successfully set date for file: " + inmov.encode('utf-8') + " date: " + str(create_date))
-
-
 
 class Uploadr:
     """ Uploadr class
@@ -585,10 +342,7 @@ class Uploadr:
         """
         Attempts to get the flickr token from disk.
        """
-#        print "TYP", type(TOKEN_PATH)
-#        print "VAR", TOKEN_PATH
         if (os.path.exists(TOKEN_PATH)):
-#            print open(TOKEN_PATH).read()
             return open(TOKEN_PATH).read()
         else:
             return None
@@ -628,6 +382,7 @@ class Uploadr:
                 "nojsoncallback": "1"
             }
             sig = self.signCall(d)
+
             url = self.urlGen(api.rest, d, sig)
             try:
                 res = self.getResponse(url)
@@ -685,22 +440,14 @@ class Uploadr:
                     success = self.deleteFile(row, cur)
         print("*****Completed deleted files*****")
 
-    def photos_search_checksum(self, infile):
+    def photo_search_checksum(self, infile):
         file_checksum = self.md5Checksum(infile)
         print "Search on Flickr:"+ infile +" md5Checksum:"+ file_checksum
         search = self.photos_search(file_checksum)
-        if search:
-            if int(search["photos"]["total"]) > 0:
-    #            print "Finns på Flickr"
-                return None
-            else:
-    #            print "Finns INTE på Flickr"
-                return infile
+        if int(search["photos"]["total"]) > 0:
+            return None
         else:
-            logging.info("---PHOTO SEARCH CHECKSUM ERROR---")
-            logging.info(infile)
             return infile
-
 
 
     def check_local_duplicate_checksum(self, inlist):
@@ -725,7 +472,9 @@ class Uploadr:
         print("**"+FILES_DIR+"**")
 
         allMedia = self.grabNewFiles()
-        self.maxFiles = [0]
+
+        self.maxFiles = 0
+
         # If managing changes, consider all files
         if MANAGE_CHANGES:
             changedMedia = allMedia
@@ -739,184 +488,65 @@ class Uploadr:
                 changedMedia = set(allMedia) - existingMedia
 
         changedMedia_count = len(changedMedia)
-        if MAX_UPLOADFILES:
-            self.Media_count = int(MAX_UPLOADFILES)
-        else:
-            self.Media_count = len(changedMedia)
-
         print("Found " + str(changedMedia_count) + " files")
-#Måste nog flytta CHECK_LOCAL_MD5CHECKSUM innan process kontroll
-        if PROCESSES:
+        if args.processes:
             if WAIT_NEXT_UPLOAD:
                 print("-"*100)
                 print("******Warning no WAIT_NEXT_UPLOAD************")
                 print("-"*100)
             if len(changedMedia) > 0:
-                self.pool = ThreadPool(processes=int(PROCESSES))
-
-##              #lägga in try här, fick (error(65, 'No route to host'),)
-#        try:
-#            self.mypage = urllib2.urlopen(self.url + 'MainPage.htm', timeout=30).read()
-#        except urllib2.URLError:
-#            sys.stderr.write("Error: system at %s not responding\n" % self.url)
-#            sys.exit(1)
-            
-                resultat = self.pool.map(self.photos_search_checksum, changedMedia)
+                self.pool = ThreadPool(processes=int(args.processes))
+                resultat = self.pool.map(self.photo_search_checksum, changedMedia)
                 resultat = filter(None, resultat)
                 self.pool.close() #we are not adding any more processes
                 self.pool.join() #tell it to wait until all threads are done before going on
                 if CHECK_LOCAL_MD5CHECKSUM:
                     resultat = self.check_local_duplicate_checksum(resultat)
-                resultat = sorted(resultat)
-                if MAX_UPLOADFILES:
-                    resultat = resultat[0:int(MAX_UPLOADFILES)]
-                self.pool = ThreadPool(processes=int(PROCESSES))
-                success = self.pool.map(self.uploadFile, resultat)
+                resultat = resultat[0:int(args.max_uploadfiles)]
+                self.pool = ThreadPool(processes=int(args.processes))
+                resultat = self.pool.map(self.uploadFile, resultat)
                 self.pool.close() #we are not adding any more processes
                 self.pool.join() #tell it to wait until all threads are done before going on
-                if int(self.maxFiles[0])  >= int(PROCESSES):
-                    print "Max success uploaded files: "+ str(self.maxFiles[0])
+                if self.maxFiles  >= int(args.processes):
+                    print "Max success uploaded files: "+ str(self.maxFiles)
                     print("-"*100)
-                    return 
+                    return
         else:
             count = 0
             for i, file in enumerate(changedMedia):
                 print("-"*100)
                 success = self.uploadFile(file)
-#                print "S", success
-#                print "UPLOADFILE", success
-                if DRIP_FEED and success and i != changedMedia_count - 1:
+                if args.drip_feed and success and i != changedMedia_count - 1:
                     print("Waiting " + str(DRIP_TIME) + " seconds before next upload")
                     time.sleep(DRIP_TIME)
-                if success == "success":
+                if success:
                     count = count + 1;
-#                if (success  == False):
-#                    print "AAA"
-#                    changedMedia.remove(file);
-#                    break
-                #Om MAX_UPLOADFILES uppnått
                 if (success  == "Stop"):
-                    count = count + 1;
-                    print "Max success uploaded files: "+ str(self.maxFiles[0])
                     print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
                     print("-"*100)
                     return
                 if (count % 100 == 0):
                     print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
+                '''
+                if not args.dry_run and WAIT_NEXT_UPLOAD and success and i != changedMedia_count - 1:
+                    file_checksum = self.md5Checksum(file)
+                    search_result = self.photos_search(file_checksum)
+                    while (int(search_result["photos"]["total"])) == 0:
+                        print("Waiting 0.5 second check exist on Flickr")
+                        time.sleep(.5)
+                        search_result = self.photos_search(file_checksum)
+                    print("Photo ok on Flickr")
+                '''
+#                if args.max_uploadfiles:
+#                    if  maxFiles >= int(args.max_uploadfiles):
+#                        print "Max success uploaded files: "+ str(maxFiles)
+#                        return success
+
             if (count % 100 > 0):
                 print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
+
         print("-"*100)
         print("*****Completed uploading files*****")
-
-    def get_photo_datetime(self, photo):
-        try:
-            photo_date = getdate("EXIF:DateTimeOriginal", photo)
-        except ValueError:
-            # Unable to parse photo title as datetime
-            pass
-        photo_date = datetime.datetime.strptime(photo_date, '%Y:%m:%d %H:%M:%S')
-        return photo_date
-
-    def set_timestamp_if_different(self, photo_datetime, filename):
-        """Set the access and modified times of a file to the specified
-        datetime.
-
-        Args:
-            photo_datetime (datetime.datetime)
-        """
-        try:
-            timestamp = time.mktime(photo_datetime.timetuple())
-            if timestamp != os.path.getmtime(filename):
-                os.utime(filename, (timestamp, timestamp))
-        except OverflowError:
-            self._progress('Error updating timestamp for: %s' % filename)
-
-    def checkRaw(self, infilename, ext):
-        dirpath = os.path.dirname(os.path.abspath(infilename))
-        filename = os.path.basename(infilename)
-        fileExt = filename.split(".")[-1]
-        filename = filename.split(".")[0]
-        if (os.path.exists(dirpath + "/" + filename + "." + ext)) and (not os.path.exists(dirpath + "/" + filename + ".JPG")):
-            return True
-        else:
-            return False
-
-    def grabNewRawFiles(self, infiles):
-        files = []
-        for ext in RAW_EXT:
-            print ("About to convert files with extension:" + ext + " files.")
-            for f in infiles:
-                checkraw = self.checkRaw(f, ext)
-                if checkraw:
-                    dirpath = os.path.dirname(os.path.abspath(f))
-                    files.append(os.path.normpath(f).replace("'", "\'"))
-        files.sort()
-        return files
-
-
-
-    def grabNewAllFiles(self):
-        """ grabNewAllFiles
-        """
-        files = []
-        for dirpath, dirnames, filenames in os.walk(unicode(FILES_DIR), followlinks=True):
-            if '.picasaoriginals' in dirnames:
-                dirnames.remove('.picasaoriginals')
-            if '@eaDir' in dirnames:
-                dirnames.remove('@eaDir')
-            for f in filenames:
-                filePath = os.path.join(dirpath, f)
-                if self.isFileIgnored(filePath):
-                    print "Ignored dir: ", filePath
-                    continue
-                if any(ignored.search(f) for ignored in IGNORED_REGEX):
-                    print "Ignored: ", f
-                    continue
-                files.append(os.path.normpath(dirpath + "/" + f).replace("'", "\'"))
-        files.sort()
-        return files
-
-
-#Kanske lite klumpig filnamn...
-
-    def convertRawFilesRun(self, infilename):
-        dirpath = os.path.dirname(os.path.abspath(infilename))
-        filename = os.path.basename(infilename)
-        fileExt = filename.split(".")[-1]
-        filename = filename.split(".")[0]
-        ext = fileExt.lower()
-#        if (not os.path.exists(dirpath + "/" + filename + ".JPG")):
-        if (os.path.exists(infilename)) and (not os.path.exists(dirpath + "/" + filename + ".JPG")) :
-            print("About to create JPG from raw " + infilename)
-    
-            flag = ""
-            if ext == "cr2":
-                flag = "PreviewImage"
-            else:
-                flag = "JpgFromRaw"
-    
-            command = RAW_TOOL_PATH + "exiftool -b -" + flag + " -w .JPG -ext " + ext + " -r '" + infilename + "'"
-            print(command)
-    
-            p = subprocess.call(command, shell=True)
-            #Gör smartare
-            if (RAW_SKIP_CREATE_ORIGINAL):
-                command = RAW_TOOL_PATH + "exiftool -overwrite_original -tagsfromfile '" + infilename + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
-                print ("Skip create "+ dirpath + "/" + filename + ".JPG_original")
-                print ("About to copy tags from " + infilename + " to JPG.")
-                p = subprocess.call(command, shell=True)
-                print ("Finished copying tags.")
-            else:
-                if (not os.path.exists(dirpath + "/" + filename + ".JPG_original")):
-                    print ("Create "+ dirpath + "/" + filename + ".JPG_original")
-                    command = RAW_TOOL_PATH + "exiftool -tagsfromfile '" + infilename + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
-                    print ("About to copy tags from " + infilename + " to JPG.")
-                    p = subprocess.call(command, shell=True)
-                    print ("Finished copying tags.")
-    
-            photo = dirpath + "/" + filename + ".JPG"
-            photo_date = self.get_photo_datetime(photo)
-            self.set_timestamp_if_different(photo_date, photo)
 
     def convertRawFiles(self):
         """ convertRawFiles
@@ -925,65 +555,45 @@ class Uploadr:
             return
 
         print "*****Converting files*****"
-        filenames = self.grabNewAllFiles()
-        filenamesraw = self.grabNewRawFiles(filenames)
-        set_max = 0
-        filenames = sorted(filenames)
-        filenamesraw = sorted(filenamesraw)
-        if len(filenamesraw) > 0:
-            if not os.path.isfile(RAW_TOOL_PATH + "exiftool"):
-                print "Wrong path to exiftool"
-                print "RAW_TOOL_PATH = " + RAW_TOOL_PATH
-                sys.exit()
-        if PROCESSES:
-            if len(filenamesraw) > 0:
-                if MAX_UPLOADFILES:
-                    filenames = filenamesraw[0:int(MAX_UPLOADFILES)]
-                self.pool = ThreadPool(processes=int(PROCESSES))
-                self.pool.map(self.convertRawFilesRun, filenames)
-                self.pool.close() #we are not adding any more processes
-                self.pool.join() #tell it to wait until all threads are done before going on
-        else:
-            for f in filenamesraw:
-                dirpath = os.path.dirname(os.path.abspath(f))
-                f2 = os.path.basename(f)
-                fileExt = f2.split(".")[-1]
-                filename = f2.split(".")[0]
-                ext = fileExt.lower()
-                if (not os.path.exists(dirpath + "/" + filename + ".JPG")):
-                    print("About to create JPG from raw " + f)
+        for ext in RAW_EXT:
+            print ("About to convert files with extension:" + ext + " files.")
 
-                    flag = ""
-                    if ext == 'cr2':
-                        flag = "PreviewImage"
-                    else:
-                        flag = "JpgFromRaw"
+            for dirpath, dirnames, filenames in os.walk(unicode(FILES_DIR), followlinks=True):
+                if '.picasaoriginals' in dirnames:
+                    dirnames.remove('.picasaoriginals')
+                if '@eaDir' in dirnames:
+                    dirnames.remove('@eaDir')
+                for f in filenames:
 
-                    command = RAW_TOOL_PATH + "exiftool -b -" + flag + " -w .JPG -ext " + ext + " -r '" + f + "'"
-                    print(command)
-                    p = subprocess.call(command, shell=True)
-#Gör smartare
-                    if (RAW_SKIP_CREATE_ORIGINAL):
-                        command = RAW_TOOL_PATH + "exiftool -overwrite_original -tagsfromfile '" + f + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
-                        print ("Skip create "+ dirpath + "/" + filename + ".JPG_original")
-                        print ("About to copy tags from " + f + " to JPG.")
-                        p = subprocess.call(command, shell=True)
-                        print ("Finished copying tags.")
-                    else:
-                        if (not os.path.exists(dirpath + "/" + filename + ".JPG_original")):
-                            print ("Create "+ dirpath + "/" + filename + ".JPG_original")
-                            command = RAW_TOOL_PATH + "exiftool -tagsfromfile '" + f + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
-                            print ("About to copy tags from " + f + " to JPG.")
+                    fileExt = f.split(".")[-1]
+                    filename = f.split(".")[0]
+                    if (fileExt.lower() == ext):
+
+                        if (not os.path.exists(dirpath + "/" + filename + ".JPG")):
+                            print("About to create JPG from raw " + dirpath + "/" + f)
+
+                            flag = ""
+                            if ext is "cr2":
+                                flag = "PreviewImage"
+                            else:
+                                flag = "JpgFromRaw"
+
+                            command = RAW_TOOL_PATH + "exiftool -b -" + flag + " -w .JPG -ext " + ext + " -r '" + dirpath + "/" + filename + "." + fileExt + "'"
+                            print(command)
+
                             p = subprocess.call(command, shell=True)
+
+                        if (not os.path.exists(dirpath + "/" + filename + ".JPG_original")):
+                            print ("About to copy tags from " + dirpath + "/" + f + " to JPG.")
+
+                            command = RAW_TOOL_PATH + "exiftool -tagsfromfile '" + dirpath + "/" + f + "' -r -all:all -ext JPG '" + dirpath + "/" + filename + ".JPG'"
+                            print(command)
+
+                            p = subprocess.call(command, shell=True)
+
                             print ("Finished copying tags.")
 
-                    photo = dirpath + "/" + filename + ".JPG"
-                    photo_date = self.get_photo_datetime(photo)
-                    self.set_timestamp_if_different(photo_date, photo)
-                    set_max = set_max + 1
-                    if MAX_UPLOADFILES:
-                        if (set_max >= int(MAX_UPLOADFILES)):
-                            return
+            print ("Finished converting files with extension:" + ext + ".")
 
         print "*****Completed converting files*****"
 
@@ -1020,7 +630,7 @@ class Uploadr:
     def uploadFile(self, file):
         """ uploadFile
         """
-        if DRY_RUN :
+        if args.dry_run :
             print("Dry Run Uploading: " + file + "...")
             return True
         success = False
@@ -1037,6 +647,7 @@ class Uploadr:
             photo_set = None
             if int(search_result["photos"]["total"]) > 0 and row is None:
                 print "Photo/Movie already exist on Flickr: "+ file +" md5="+ file_checksum +" not in DB, fixit"
+                file_id = int(search_result["photos"]["photo"][0]["id"])
                 #Fixa Set/Album
                 file_id = search_result["photos"]["photo"][0]["id"]
                 file_info = self.photos_getallcontexts(file_id)
@@ -1066,8 +677,6 @@ class Uploadr:
                 row = None
             if row is None:
                 print("Uploading: " + file + "...")
-
-                print("File <" + str(self.maxFiles[0] + 1) + "><" + str(self.Media_count) + ">")
                 if FULL_SET_NAME_NEW:
                     if FULL_SET_NAME:
                         setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
@@ -1080,12 +689,12 @@ class Uploadr:
                         head, setName = os.path.split(os.path.dirname(file))
                 try:
                     photo = ('photo', file.encode('utf-8'), open(file, 'rb').read())
-                    if TITLE:  # Replace
-                        FLICKR["title"] = TITLE
-                    if DESCRIPTION:  # Replace
-                        FLICKR["description"] = DESCRIPTION
-                    if TAGS:  # Append
-                        FLICKR["tags"] += " " + TAGS
+                    if args.title:  # Replace
+                        FLICKR["title"] = args.title
+                    if args.description:  # Replace
+                        FLICKR["description"] = args.description
+                    if args.tags:  # Append
+                        FLICKR["tags"] += " "
                     if TITLE_FILENAME:
                         base=os.path.basename(file)
                         FLICKR["title"] = os.path.splitext(base)[0]
@@ -1106,59 +715,38 @@ class Uploadr:
                     url = self.build_request(api.upload, d, (photo,))
                     res = None
                     search_result = None
-#                    for x in range(0, MAX_UPLOAD_ATTEMPTS):
-#                        try:
-                    res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
-#                            res = urllib2.urlopen(url, timeout=SOCKET_TIMEOUT)
-#                            print "RES1", res, url
-#                            print str(res.toxml())
-                    search_result = None
-                    status = res.documentElement.attributes['stat'].value
-                    if res.documentElement.attributes['stat'].value == "ok":
-                        photoID = res.getElementsByTagName("photoid")[0].childNodes[0].data
-                        print "*** File: <" +file+ "> Status: <" +status+ ">, FlickrId: <" +photoID+ "> ***"
-                        self.maxFiles[0] =  self.maxFiles[0] + 1
-                        success = "success"
-                    else:
-                        plist = res.getElementsByTagName("err")[0]
-                        errCode = plist.attributes["code"].value
-                        msgTxt = plist.attributes["msg"].value
-                        print "***VARNING File: <" +file+ "> Status: <" +status+ ">, Errcode: <" +errCode+ ">, Msg: <" +msgTxt+ "> ***"
-                        logging.info("***VARNING File: <" +file+ "> Status: <" +status+ ">, Errcode: <" +errCode+ ">, Msg: <" +msgTxt+ "> ***")
-                        logging.info("---xml info---")
-                        logging.info(str(res.toxml()))
-#                        success = False
-                        return False
-#                                return "error"
+                    for x in range(0, MAX_UPLOAD_ATTEMPTS):
+                        try:
+                            res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
+                            search_result = None
+                            break
+                        except (IOError, httplib.HTTPException): #Om uppladdning misslyckas, kolla om filen kommit upp.
+                            print(str(sys.exc_info()))
+                            print("Check is file already uploaded")
+                            time.sleep(5)
 
-#                        except (IOError, httplib.HTTPException): #Om uppladdning misslyckas, kolla om filen kommit upp.
-#                        print "RES2", res
-#                        print(str(sys.exc_info()))
-#                        print("Check is file already uploaded, sleep 10 s.")
-#                        time.sleep(10)
-#                        search_result = self.photos_search(file_checksum)
-#                        if search_result["stat"] != "ok":
-#                            raise IOError(search_result)
+                            search_result = self.photos_search(file_checksum)
+                            if search_result["stat"] != "ok":
+                                raise IOError(search_result)
 
-#                        if int(search_result["photos"]["total"]) == 0:
-#                            if x == MAX_UPLOAD_ATTEMPTS - 1:
-#                                raise ValueError("Reached maximum number of attempts to upload, skipping")
+                            if int(search_result["photos"]["total"]) == 0:
+                                if x == MAX_UPLOAD_ATTEMPTS - 1:
+                                    raise ValueError("Reached maximum number of attempts to upload, skipping")
 
-#                            print("Not found, reuploading")
-#                            continue
+                                print("Not found, reuploading")
+                                continue
 
-#                        if int(search_result["photos"]["total"]) > 1:
-#                            raise IOError("More then one file with same checksum, collisions? " + search_result)
+                            if int(search_result["photos"]["total"]) > 1:
+                                raise IOError("More then one file with same checksum, collisions? " + search_result)
 
-#                        if int(search_result["photos"]["total"]) == 1:
-#                            break
+                            if int(search_result["photos"]["total"]) == 1:
+                                break
                     search_result = self.photos_search(file_checksum)
                     if not search_result and res.documentElement.attributes['stat'].value != "ok":
                         print("A problem occurred while attempting to upload the file: " + file)
                         raise IOError(str(res.toxml()))
 
                     print("Successfully uploaded the file: " + file)
-                    print "*****Add tag", FLICKR["tags"] + " to " + file
 
                     if WAIT_NEXT_UPLOAD:
                         search_result = self.photos_search(file_checksum)
@@ -1189,15 +777,12 @@ class Uploadr:
                     filetype = mimetypes.guess_type(file)
                     if 'video' in filetype[0]:
                         movieCreateDate(file_id, file, last_modified)
-                    #Check exif:date
-                    if 'image' in filetype[0]:
-                        imageCreateDate(file_id, file, last_modified)
                     # Add to db
                     cur.execute(
                         'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
                         (file_id, file, file_checksum, last_modified))
 
-                    success = "success"
+                    success = True
                 except:
                     print(str(sys.exc_info()))
 
@@ -1212,16 +797,23 @@ class Uploadr:
                     fileMd5 = self.md5Checksum(file)
                     if (fileMd5 != str(row[4])):
                         self.replacePhoto(file, row[1], row[4], fileMd5, last_modified, cur, con);
-#            if success == "success":
-#                self.maxFiles =  self.maxFiles + 1
-            if MAX_UPLOADFILES:
-                if  int(self.maxFiles[0]) >= int(MAX_UPLOADFILES):
+            if success:
+#                print "Succ", success
+                self.maxFiles = self.maxFiles + 1
+#                print "maxFiles", self.maxFiles
+            if args.max_uploadfiles:
+                if  self.maxFiles >= int(args.max_uploadfiles):
+#                    print "Max success uploaded files: "+ str(self.maxFiles)
+#                    print "Pool terminate", self.pool
+#                    self.pool.close()
+#                    self.pool.terminate()
+#                    self.pool.join()
                     return "Stop"
             return success
 
     def replacePhoto(self, file, file_id, oldFileMd5, fileMd5, last_modified, cur, con):
 
-        if DRY_RUN :
+        if args.dry_run :
             print("Dry Run Replace file " + file + "...")
             return True
 
@@ -1302,9 +894,9 @@ class Uploadr:
 
     def deleteFile(self, file, cur):
 
-        if DRY_RUN :
-            print("Deleting file: " + file[1].decode('utf-8'))
-            return True
+        if args.dry_run :
+	        print("Deleting file: " + file[1].decode('utf-8'))
+                return True
 
         success = False
         print("Deleting file: " + file[1].decode('utf-8'))
@@ -1351,7 +943,7 @@ class Uploadr:
 
     def deleteFiledb(self, file):
 
-        if DRY_RUN :
+        if args.dry_run :
             print("Deleting file in DB: " + file[2].decode('utf-8'))
             return True
 
@@ -1456,18 +1048,8 @@ class Uploadr:
             res = urllib2.urlopen(url, timeout=SOCKET_TIMEOUT).read()
         except urllib2.HTTPError, e:
             print(e.code)
-            print "urllib2.HTTPError"
-            logging.info("---urllib2.HTTPError---")
-            logging.info(url)
-            logging.info(e)
-            return None
         except urllib2.URLError, e:
             print(e.args)
-            print "urllib2.URLError"
-            logging.info("---urllib2.URLError---")
-            logging.info(url)
-            logging.info(e)
-            return None
         return json.loads(res, encoding='utf-8')
 
     def run(self):
@@ -1497,19 +1079,13 @@ class Uploadr:
             flickrsetId = self.getFlickrSetsId(setName)
             print("adding file to set: " + row[1].decode('utf-8') +" to " + setName.decode('utf-8'))
             self.addFileToSet(flickrsetId, row, cur, True)
-            con.commit()
+#            print(res['message'] + "... updating DB")
+#            cur.execute("UPDATE files SET set_id = ? WHERE files_id = ?", (setId, file[0]))
 
-#Verkar bli db lock, om man inte har con.commit()
-            if ALBUM and not setName == ALBUM:
-                setName = ALBUM
-                flickrsetId = self.getFlickrSetsId(setName)
-                print("adding file to Album: " + row[1].decode('utf-8') +" to " + setName.decode('utf-8'))
-                self.addFileToSet(flickrsetId, row, cur, False)
-                con.commit()
-
+    
     def createSets(self):
         print('*****Creating Sets*****')
-        if DRY_RUN :
+        if args.dry_run :
             return True
         con = lite.connect(DB_PATH)
         con.text_factory = str
@@ -1518,10 +1094,9 @@ class Uploadr:
             cur.execute("SELECT files_id, path, set_id FROM files WHERE set_id IS NULL OR set_id = ''")
 
             files = cur.fetchall()
-            files = self.photo_movie
-            if PROCESSES:
+            if args.processes:
                 if len(files) > 0:
-                    self.pool = ThreadPool(processes=int(PROCESSES))
+                    self.pool = ThreadPool(processes=int(args.processes))
                     resultat = self.pool.map(self.createSetsRun, files)
                     self.pool.close() #we are not adding any more processes
                     self.pool.join() #tell it to wait until all threads are done before going on
@@ -1548,6 +1123,7 @@ class Uploadr:
                 print "Already set exist: "+ album.decode('utf-8')
 
     def createSetsTypeRun(self,row):
+        #Gör om kan inte kolla alla filer i databasen om video/photo
         con = lite.connect(DB_PATH, timeout=1)
         con.text_factory = str
         with con:
@@ -1564,7 +1140,7 @@ class Uploadr:
 
     def createFlickrAlbum(self):
         print('*****Creating Flickr Album*****')
-        if DRY_RUN :
+        if args.dry_run :
             return True
         con = lite.connect(DB_PATH)
         con.text_factory = str
@@ -1574,8 +1150,6 @@ class Uploadr:
             cur = con.cursor()
             cur.execute("SELECT files_id, path, set_id FROM files WHERE set_id IS NULL OR set_id = ''")
             files = cur.fetchall()
-            #Special make new list to use in CreatingSets/CreatingSetsType
-            self.photo_movie = files
             #Fix All_Video and All_Photo
             for row in files:
                 if SET_TYPE:
@@ -1599,15 +1173,11 @@ class Uploadr:
                     else:
                         head, setName = os.path.split(os.path.dirname(row[1]))
                 albumDict[setName] = row[0]
-            if ALBUM and files:
-#                albumDict[args.album] = row[0]
-                albumDict[ALBUM] = row[0]
             albumList = [(k,v) for k,v in albumDict.items()]
-#            print albumList
-#            sys.exit()
-            if PROCESSES:
+#            print "AL", albumList
+            if args.processes:
                 if len(albumList) > 0:
-                    self.pool = ThreadPool(processes=int(PROCESSES))
+                    self.pool = ThreadPool(processes=int(args.processes))
                     resultat = self.pool.map(self.createAlbumFlickr, albumList)
                     self.pool.close() #we are not adding any more processes
                     self.pool.join() #tell it to wait until all threads are done before going on
@@ -1618,7 +1188,7 @@ class Uploadr:
 
     def createSetsType(self):
         print('*****Creating Sets Type*****')
-        if DRY_RUN :
+        if args.dry_run :
             return True
         con = lite.connect(DB_PATH)
         con.text_factory = str
@@ -1626,10 +1196,9 @@ class Uploadr:
             cur = con.cursor()
             cur.execute("SELECT files_id, path, set_id FROM files WHERE set_id IS NULL OR set_id = ''")
             files = cur.fetchall()
-
-            if PROCESSES:
+            if args.processes:
                 if len(files) > 0:
-                    self.pool = ThreadPool(processes=int(PROCESSES))
+                    self.pool = ThreadPool(processes=int(args.processes))
                     resultat = self.pool.map(self.createSetsTypeRun, files)
                     self.pool.close() #we are not adding any more processes
                     self.pool.join() #tell it to wait until all threads are done before going on
@@ -1640,7 +1209,8 @@ class Uploadr:
         print('*****Completed creating sets to All_Photo/All_Video*****')
 
     def addFileToSet(self, setId, file, cur, CreateInDb):
-        if DRY_RUN :
+
+        if args.dry_run :
                 return True
         try:
             d = {
@@ -1655,10 +1225,12 @@ class Uploadr:
             sig = self.signCall(d)
             url = self.urlGen(api.rest, d, sig)
             res = self.getResponse(url)
+#            print "file", file
             if (self.isGood(res)):
                 if CreateInDb:
-                    print("Successfully added file " + str(file[1]))
+                    print("Successfully added file " + str(file[0]))
                     cur.execute("UPDATE files SET set_id = ? WHERE files_id = ?", (setId, file[0]))
+#                else:
 
             else:
                 if (res['code'] == 1):
@@ -1687,7 +1259,7 @@ class Uploadr:
     def createSet(self, setName, primaryPhotoId, cur, con, CreateInDb):
         print("Creating new set: " + setName.decode('utf-8'))
 
-        if DRY_RUN :
+        if args.dry_run :
                 return True
 
         try:
@@ -1708,8 +1280,9 @@ class Uploadr:
             res = self.getResponse(url)
             if (self.isGood(res)):
                 if CreateInDb:
+#                    print "res" , res
                     self.logSetCreation(res["photoset"]["id"], setName, primaryPhotoId, cur, con)
-                    print "adding file to set: "+ str(primaryPhotoId) +" to "+ setName + " as primary photo"
+                    print "adding file to set: "+ str(primaryPhotoId) +" to "+ setName
                     return res["photoset"]["id"]
             else:
                 print("Error upload", d)
@@ -1761,7 +1334,7 @@ class Uploadr:
     # Method to clean unused sets
     def removeUselessSetsTable(self):
         print('*****Removing empty Sets from DB*****')
-        if DRY_RUN :
+        if args.dry_run :
                 return True
 
 
@@ -1794,7 +1367,7 @@ class Uploadr:
     # Get sets from Flickr
     def getFlickrSets(self):
         print('*****Adding Flickr Sets to DB*****')
-        if DRY_RUN :
+        if args.dry_run :
                 return True
 
         con = lite.connect(DB_PATH)
@@ -1832,7 +1405,7 @@ class Uploadr:
 
     # Get setId from name on Flickr
     def getFlickrSetsId(self, insetName):
-        if DRY_RUN :
+        if args.dry_run :
                 return True
 
         try:
@@ -1859,7 +1432,7 @@ class Uploadr:
         return None
 
     def getFlickrSetInfo(self,setId):
-        if DRY_RUN :
+        if args.dry_run :
                 return True
 
         try:
@@ -1894,13 +1467,7 @@ class Uploadr:
         }
 
         url = self.urlGen(api.rest, data, self.signCall(data))
-        resultat = self.getResponse(url)
-#        return self.getResponse(url)
-        if resultat:
-            return resultat
-        else:
-            print "ERROR"
-            return None
+        return self.getResponse(url)
 
     def people_get_photos(self):
         data = {
@@ -1947,7 +1514,6 @@ class Uploadr:
     def photos_add_tag(self, photo_id, tags, photo):
         if not FULL_SET_NAME_NEW:
             tags = [tag.replace(',', '') for tag in tags]
-        tags =  ''.join(tags)
         data = {
             "auth_token": str(self.token),
             "perms": str(self.perms),
@@ -1957,7 +1523,7 @@ class Uploadr:
             "photo_id": str(photo_id),
             "tags": tags
         }
-        print "*****Add tag "+ tags +" to "+ str(photo) +"*****"
+        print "*****Add tag "+ str(tags) +" to "+ str(photo) +"*****"
         url = self.urlGen(api.rest, data, self.signCall(data))
         return self.getResponse(url)
 
@@ -2045,12 +1611,10 @@ class Uploadr:
         res = self.photos_get_not_in_set()
         if res["stat"] != "ok":
             raise IOError(res)
-        print 'Photos not in sets on flickr: {}'.format(res["photos"]["total"])
 #        print "res", res
-        
+        print 'Photos not in sets on flickr: {}'.format(res["photos"]["total"])
 
    
-
 
 print("--------- Start time: " + time.strftime("%c") + " ---------")
 if __name__ == "__main__":
@@ -2065,57 +1629,6 @@ if __name__ == "__main__":
     logging.getLogger('').addHandler(errors)
     '''
     # Ensure that only once instance of this script is running
-
-
-
-
-    global args
-    args = config.build_options()
-    upgrade_service = config.UpgradeService(args)
-#    print "args", args.config
-    if not os.path.exists(args.config):
-        print "args", args.config
-        sys.exit()
-    logname = time.strftime("%Y%m%d_%H%M%S")
-    logpathname = os.path.join(os.path.dirname(sys.argv[0]), logname + ".err")
-    logging.basicConfig(filename=logpathname, level=logging.INFO)
-    logging.getLogger("upload.py")
-
-#    parser = argparse.ArgumentParser(description='Upload files to Flickr.')
-#    parser.add_argument('-d', '--daemon', action='store_true',
-#                        help='Run forever as a daemon')
-#    parser.add_argument('-i', '--title', action='store',
-#                        help='Title for uploaded files')
-#    parser.add_argument('-e', '--description', action='store',
-#                        help='Description for uploaded files')
-#    parser.add_argument('-t', '--tags', action='store',
-#                        help='Space-separated tags for uploaded files')
-#    parser.add_argument('-r', '--drip-feed', action='store_true',
-#                        help='Wait a bit between uploading individual files')
-#    parser.add_argument('-p', '--processes',
-#                        help='Number of photos to upload simultaneously')
-#    parser.add_argument('-n', '--dry-run', action='store_true',
-#                        help='Dry run')
-#    parser.add_argument('-g', '--remove-ignored', action='store_true',
-#                        help='Remove previously uploaded files, now ignored')
-#    parser.add_argument('-m', '--max-uploadfiles',
-#                        help='Max number of photos/movies to upload')
-#    parser.add_argument('-a', '--album',
-#                        help='Add to album')
-#    parser.add_argument('-c', '--configfile',
-#                        help='Read configfile, in same dir as program')
-#    args = parser.parse_args()
-
-    configfileread()
-
-    '''
-    if MAX_UPLOADFILES:
-        print "T", MAX_UPLOADFILES
-    else:
-        print "N", MAX_UPLOADFILES
-    sys.exit()
-    '''
-
     f = open(LOCK_PATH, 'w')
     try:
         fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -2124,63 +1637,65 @@ if __name__ == "__main__":
             sys.stderr.write('[%s] Script already running.\n' % time.strftime('%c'))
             sys.exit(-1)
         raise
+    parser = argparse.ArgumentParser(description='Upload files to Flickr.')
+    parser.add_argument('-d', '--daemon', action='store_true',
+                        help='Run forever as a daemon')
+    parser.add_argument('-i', '--title', action='store',
+                        help='Title for uploaded files')
+    parser.add_argument('-e', '--description', action='store',
+                        help='Description for uploaded files')
+    parser.add_argument('-t', '--tags', action='store',
+                        help='Space-separated tags for uploaded files')
+    parser.add_argument('-r', '--drip-feed', action='store_true',
+                        help='Wait a bit between uploading individual files')
+    parser.add_argument('-p', '--processes',
+                        help='Number of photos to upload simultaneously')
+    parser.add_argument('-n', '--dry-run', action='store_true',
+                        help='Dry run')
+    parser.add_argument('-g', '--remove-ignored', action='store_true',
+                        help='Remove previously uploaded files, now ignored')
+    parser.add_argument('-m', '--max-uploadfiles',
+                        help='Max number of photos/movies to upload')
+    args = parser.parse_args()
+    print args.dry_run
 
+    if args.max_uploadfiles:
+        print "Max upload photo/movies = "+ args.max_uploadfiles
 
-
-#    print DRY_RUN
-#    print(args)
-#    print type(args.salbum)
-#    sys.exit()
-
-    if MAX_UPLOADFILES:
-        print "Max upload photo/movies = "+ MAX_UPLOADFILES
     flick = Uploadr()
 
-    if FILES_DIR == "" or not (os.path.isdir(FILES_DIR)):
-        print "FILES_DIR = ", FILES_DIR
+    if FILES_DIR == "":
         print("Please configure the name of the folder in the script with media available to sync with Flickr.")
         sys.exit()
-#    print "TYPE", type(FLICKR), FLICKR
+
     if FLICKR["api_key"] == "" or FLICKR["secret"] == "":
         print("Please enter an API key and secret in the script file (see README).")
         sys.exit()
 
-#Checka internet, annars
-    internet = have_internet()
-    if not internet:
-        print "No internet :("
-        sys.exit(1)
-
-
-
     flick.setupDB()
-    flick.checkToken()
-#    print "xxx", xx
-    if DAEMON:
+    if args.daemon:
         flick.run()
     else:
         if not flick.checkToken():
             flick.authenticate()
         flick.displaySets()
         flick.removeUselessSetsTable()
-        flick.getFlickrSets() #Add flickrsets to DB
+        flick.getFlickrSets()
         flick.convertRawFiles()
-        flick.upload() #Upload Files
+        flick.upload()
         if REMOVE_DELETE_FLICKR == True:
             flick.removeDeletedMedia()
-            if REMOVE_IGNORED:
+            if args.remove_ignored:
                 flick.removeIgnoredMedia()
         else:
             print("*****Removing deleted files INACTIVE*****")
         flick.createFlickrAlbum()
         if SET_TYPE:
             flick.createSetsType()
+#        sys.exit()
         flick.createSets()
         flick.print_stat()
 
-#remove logg file if empty
-if os.path.getsize(logpathname) == 0:
-        print "Remove " + logpathname + " is empty"
-        os.remove(logpathname)
+
 
 print("--------- End time: " + time.strftime("%c") + " ---------")

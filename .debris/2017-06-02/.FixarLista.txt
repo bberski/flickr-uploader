@@ -1,0 +1,14 @@
+1. Om man laddar upp flera gånger samma dag vid olika tillfällen.
+så skapas identiska Album(set) namn.
+Verkar bara hända om man tar bort Albumet samma dag och laddar upp nytt.
+t.ex. 
+Problemet verkar vara om DB har flera av samma Album namn
+
+2. Om inte .MOV fil borde köra MoveDate2.
+
+
+*Fixat
+-p 2 måste fixa Albumen i förväg innan self.pool = ThreadPool(processes=int(args.processes)).
+Men hur ???
+
+använd inte db sökning med None

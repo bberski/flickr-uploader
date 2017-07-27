@@ -85,6 +85,7 @@ sys.setdefaultencoding('utf8')
 
 
 
+
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
     sys.stderr.write("Current version: " + sys.version + "\n")
@@ -193,6 +194,7 @@ def configfileread():
 #    SET_TYPE = eval(config.get('Config', 'SET_TYPE'))
 #    CHECK_LOCAL_MD5CHECKSUM = eval(config.get('Config', 'CHECK_LOCAL_MD5CHECKSUM'))
 
+    
     
     ppprint("args.FILES_DIR")
     ppprint("args.FLICKR")
@@ -2051,6 +2053,10 @@ class Uploadr:
 
    
 
+logname = time.strftime("%Y%m%d_%H%M%S")
+logpathname = os.path.join(os.path.dirname(sys.argv[0]), logname + ".err")
+logging.basicConfig(filename=logpathname, level=logging.INFO)
+logging.getLogger("upload.py")
 
 print("--------- Start time: " + time.strftime("%c") + " ---------")
 if __name__ == "__main__":
@@ -2066,9 +2072,6 @@ if __name__ == "__main__":
     '''
     # Ensure that only once instance of this script is running
 
-
-
-
     global args
     args = config.build_options()
     upgrade_service = config.UpgradeService(args)
@@ -2076,10 +2079,6 @@ if __name__ == "__main__":
     if not os.path.exists(args.config):
         print "args", args.config
         sys.exit()
-    logname = time.strftime("%Y%m%d_%H%M%S")
-    logpathname = os.path.join(os.path.dirname(sys.argv[0]), logname + ".err")
-    logging.basicConfig(filename=logpathname, level=logging.INFO)
-    logging.getLogger("upload.py")
 
 #    parser = argparse.ArgumentParser(description='Upload files to Flickr.')
 #    parser.add_argument('-d', '--daemon', action='store_true',

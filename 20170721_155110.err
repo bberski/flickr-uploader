@@ -1,0 +1,10 @@
+INFO:root:---urllib2.URLError---
+INFO:root:https://api.flickr.com/services/rest/?user_id=me&format=json&perms=delete&auth_token=72157679183658886-33bf1e915aa68a2d&tags=checksum%3Aa35ea73c70f209cf3d2c125fa48e6362&api_sig=353e3e9ca0955febfd0e6aa63823d9a0&nojsoncallback=1&api_key=ea171ec72efad4861edbd1684f9b6024&method=flickr.photos.search
+INFO:root:<urlopen error ('_ssl.c:574: The handshake operation timed out',)>
+INFO:root:---PHOTO SEARCH CHECKSUM ERROR---
+INFO:root:/tmp/Bilder/170721-Iphone6/IMG_5242.JPG
+INFO:root:---urllib2.URLError---
+INFO:root:https://api.flickr.com/services/rest/?user_id=me&format=json&perms=delete&auth_token=72157679183658886-33bf1e915aa68a2d&tags=checksum%3Ae2f1931d133566f001593e5fb660a9ce&api_sig=7f40dbc1d4a2ca52811d92b1c29f45a8&nojsoncallback=1&api_key=ea171ec72efad4861edbd1684f9b6024&method=flickr.photos.search
+INFO:root:<urlopen error ('_ssl.c:574: The handshake operation timed out',)>
+INFO:root:---PHOTO SEARCH CHECKSUM ERROR---
+INFO:root:/tmp/Bilder/170721-Iphone6/IMG_5290.JPG

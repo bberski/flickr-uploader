@@ -78,12 +78,9 @@ import datetime
 import struct
 import pyexiftool.exiftool as exiftool
 import config
-import logging
 # encoding=utf8
 reload(sys)
 sys.setdefaultencoding('utf8')
-
-
 
 if sys.version_info < (2, 7):
     sys.stderr.write("This script requires Python 2.7 or newer.\n")
@@ -155,7 +152,6 @@ def configfileread():
     global DESCRIPTION
     global TAGS
     
-
 #    try:
 #        config = ConfigParser.SafeConfigParser()
 #        config.read(os.path.join(os.path.dirname(sys.argv[0]), upload_ini))
@@ -193,6 +189,7 @@ def configfileread():
 #    SET_TYPE = eval(config.get('Config', 'SET_TYPE'))
 #    CHECK_LOCAL_MD5CHECKSUM = eval(config.get('Config', 'CHECK_LOCAL_MD5CHECKSUM'))
 
+    
     
     ppprint("args.FILES_DIR")
     ppprint("args.FLICKR")
@@ -685,22 +682,14 @@ class Uploadr:
                     success = self.deleteFile(row, cur)
         print("*****Completed deleted files*****")
 
-    def photos_search_checksum(self, infile):
+    def photo_search_checksum(self, infile):
         file_checksum = self.md5Checksum(infile)
         print "Search on Flickr:"+ infile +" md5Checksum:"+ file_checksum
         search = self.photos_search(file_checksum)
-        if search:
-            if int(search["photos"]["total"]) > 0:
-    #            print "Finns på Flickr"
-                return None
-            else:
-    #            print "Finns INTE på Flickr"
-                return infile
+        if int(search["photos"]["total"]) > 0:
+            return None
         else:
-            logging.info("---PHOTO SEARCH CHECKSUM ERROR---")
-            logging.info(infile)
             return infile
-
 
 
     def check_local_duplicate_checksum(self, inlist):
@@ -725,7 +714,8 @@ class Uploadr:
         print("**"+FILES_DIR+"**")
 
         allMedia = self.grabNewFiles()
-        self.maxFiles = [0]
+        self.maxFiles = 0
+
         # If managing changes, consider all files
         if MANAGE_CHANGES:
             changedMedia = allMedia
@@ -739,11 +729,6 @@ class Uploadr:
                 changedMedia = set(allMedia) - existingMedia
 
         changedMedia_count = len(changedMedia)
-        if MAX_UPLOADFILES:
-            self.Media_count = int(MAX_UPLOADFILES)
-        else:
-            self.Media_count = len(changedMedia)
-
         print("Found " + str(changedMedia_count) + " files")
 #Måste nog flytta CHECK_LOCAL_MD5CHECKSUM innan process kontroll
         if PROCESSES:
@@ -753,15 +738,7 @@ class Uploadr:
                 print("-"*100)
             if len(changedMedia) > 0:
                 self.pool = ThreadPool(processes=int(PROCESSES))
-
-##              #lägga in try här, fick (error(65, 'No route to host'),)
-#        try:
-#            self.mypage = urllib2.urlopen(self.url + 'MainPage.htm', timeout=30).read()
-#        except urllib2.URLError:
-#            sys.stderr.write("Error: system at %s not responding\n" % self.url)
-#            sys.exit(1)
-            
-                resultat = self.pool.map(self.photos_search_checksum, changedMedia)
+                resultat = self.pool.map(self.photo_search_checksum, changedMedia)
                 resultat = filter(None, resultat)
                 self.pool.close() #we are not adding any more processes
                 self.pool.join() #tell it to wait until all threads are done before going on
@@ -774,8 +751,8 @@ class Uploadr:
                 success = self.pool.map(self.uploadFile, resultat)
                 self.pool.close() #we are not adding any more processes
                 self.pool.join() #tell it to wait until all threads are done before going on
-                if int(self.maxFiles[0])  >= int(PROCESSES):
-                    print "Max success uploaded files: "+ str(self.maxFiles[0])
+                if self.maxFiles  >= int(PROCESSES):
+                    print "Max success uploaded files: "+ str(self.maxFiles)
                     print("-"*100)
                     return 
         else:
@@ -783,21 +760,17 @@ class Uploadr:
             for i, file in enumerate(changedMedia):
                 print("-"*100)
                 success = self.uploadFile(file)
-#                print "S", success
-#                print "UPLOADFILE", success
+                print "success", success
                 if DRIP_FEED and success and i != changedMedia_count - 1:
                     print("Waiting " + str(DRIP_TIME) + " seconds before next upload")
                     time.sleep(DRIP_TIME)
                 if success == "success":
                     count = count + 1;
-#                if (success  == False):
-#                    print "AAA"
-#                    changedMedia.remove(file);
-#                    break
-                #Om MAX_UPLOADFILES uppnått
-                if (success  == "Stop"):
-                    count = count + 1;
-                    print "Max success uploaded files: "+ str(self.maxFiles[0])
+                if (success  == None):
+                    print "AAA"
+                    changedMedia.remove(file);
+                    break
+                if (success  == "stop"):
                     print("" + str(count) + " files processed (uploaded, md5ed or timestamp checked)")
                     print("-"*100)
                     return
@@ -1066,8 +1039,6 @@ class Uploadr:
                 row = None
             if row is None:
                 print("Uploading: " + file + "...")
-
-                print("File <" + str(self.maxFiles[0] + 1) + "><" + str(self.Media_count) + ">")
                 if FULL_SET_NAME_NEW:
                     if FULL_SET_NAME:
                         setName = str(datetime.datetime.now().strftime('%Y/%m/%d'))
@@ -1106,52 +1077,48 @@ class Uploadr:
                     url = self.build_request(api.upload, d, (photo,))
                     res = None
                     search_result = None
-#                    for x in range(0, MAX_UPLOAD_ATTEMPTS):
-#                        try:
-                    res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
+                    for x in range(0, MAX_UPLOAD_ATTEMPTS):
+                        try:
+                            res = parse(urllib2.urlopen(url, timeout=SOCKET_TIMEOUT))
 #                            res = urllib2.urlopen(url, timeout=SOCKET_TIMEOUT)
 #                            print "RES1", res, url
 #                            print str(res.toxml())
-                    search_result = None
-                    status = res.documentElement.attributes['stat'].value
-                    if res.documentElement.attributes['stat'].value == "ok":
-                        photoID = res.getElementsByTagName("photoid")[0].childNodes[0].data
-                        print "*** File: <" +file+ "> Status: <" +status+ ">, FlickrId: <" +photoID+ "> ***"
-                        self.maxFiles[0] =  self.maxFiles[0] + 1
-                        success = "success"
-                    else:
-                        plist = res.getElementsByTagName("err")[0]
-                        errCode = plist.attributes["code"].value
-                        msgTxt = plist.attributes["msg"].value
-                        print "***VARNING File: <" +file+ "> Status: <" +status+ ">, Errcode: <" +errCode+ ">, Msg: <" +msgTxt+ "> ***"
-                        logging.info("***VARNING File: <" +file+ "> Status: <" +status+ ">, Errcode: <" +errCode+ ">, Msg: <" +msgTxt+ "> ***")
-                        logging.info("---xml info---")
-                        logging.info(str(res.toxml()))
-#                        success = False
-                        return False
+                            search_result = None
+                            status = res.documentElement.attributes['stat'].value
+                            if res.documentElement.attributes['stat'].value == "ok":
+                                photoID = res.getElementsByTagName("photoid")[0].childNodes[0].data
+                                print "***Status: <" +status+ ">, FlickrId: <" +photoID+ "> ***"
+                                return "success"
+#                                break
+                            else:
+                                plist = res.getElementsByTagName("err")[0]
+                                errCode = plist.attributes["code"].value
+                                msgTxt = plist.attributes["msg"].value
+                                print "********VARNING Status: <" +status+ ">, Errcode: <" +errCode+ ">, Msg: <" +msgTxt+ "> ***************"
+                                return False
 #                                return "error"
 
-#                        except (IOError, httplib.HTTPException): #Om uppladdning misslyckas, kolla om filen kommit upp.
-#                        print "RES2", res
-#                        print(str(sys.exc_info()))
-#                        print("Check is file already uploaded, sleep 10 s.")
-#                        time.sleep(10)
-#                        search_result = self.photos_search(file_checksum)
-#                        if search_result["stat"] != "ok":
-#                            raise IOError(search_result)
+                        except (IOError, httplib.HTTPException): #Om uppladdning misslyckas, kolla om filen kommit upp.
+                            print "RES2", res
+                            print(str(sys.exc_info()))
+                            print("Check is file already uploaded, sleep 10 s.")
+                            time.sleep(10)
+                            search_result = self.photos_search(file_checksum)
+                            if search_result["stat"] != "ok":
+                                raise IOError(search_result)
 
-#                        if int(search_result["photos"]["total"]) == 0:
-#                            if x == MAX_UPLOAD_ATTEMPTS - 1:
-#                                raise ValueError("Reached maximum number of attempts to upload, skipping")
+                            if int(search_result["photos"]["total"]) == 0:
+                                if x == MAX_UPLOAD_ATTEMPTS - 1:
+                                    raise ValueError("Reached maximum number of attempts to upload, skipping")
 
-#                            print("Not found, reuploading")
-#                            continue
+                                print("Not found, reuploading")
+                                continue
 
-#                        if int(search_result["photos"]["total"]) > 1:
-#                            raise IOError("More then one file with same checksum, collisions? " + search_result)
+                            if int(search_result["photos"]["total"]) > 1:
+                                raise IOError("More then one file with same checksum, collisions? " + search_result)
 
-#                        if int(search_result["photos"]["total"]) == 1:
-#                            break
+                            if int(search_result["photos"]["total"]) == 1:
+                                break
                     search_result = self.photos_search(file_checksum)
                     if not search_result and res.documentElement.attributes['stat'].value != "ok":
                         print("A problem occurred while attempting to upload the file: " + file)
@@ -1197,7 +1164,7 @@ class Uploadr:
                         'INSERT INTO files (files_id, path, md5, last_modified, tagged) VALUES (?, ?, ?, ?, 1)',
                         (file_id, file, file_checksum, last_modified))
 
-                    success = "success"
+                    success = True
                 except:
                     print(str(sys.exc_info()))
 
@@ -1212,10 +1179,10 @@ class Uploadr:
                     fileMd5 = self.md5Checksum(file)
                     if (fileMd5 != str(row[4])):
                         self.replacePhoto(file, row[1], row[4], fileMd5, last_modified, cur, con);
-#            if success == "success":
-#                self.maxFiles =  self.maxFiles + 1
+            if success:
+                self.maxFiles = self.maxFiles + 1
             if MAX_UPLOADFILES:
-                if  int(self.maxFiles[0]) >= int(MAX_UPLOADFILES):
+                if  self.maxFiles >= int(MAX_UPLOADFILES):
                     return "Stop"
             return success
 
@@ -1456,18 +1423,8 @@ class Uploadr:
             res = urllib2.urlopen(url, timeout=SOCKET_TIMEOUT).read()
         except urllib2.HTTPError, e:
             print(e.code)
-            print "urllib2.HTTPError"
-            logging.info("---urllib2.HTTPError---")
-            logging.info(url)
-            logging.info(e)
-            return None
         except urllib2.URLError, e:
             print(e.args)
-            print "urllib2.URLError"
-            logging.info("---urllib2.URLError---")
-            logging.info(url)
-            logging.info(e)
-            return None
         return json.loads(res, encoding='utf-8')
 
     def run(self):
@@ -1894,13 +1851,7 @@ class Uploadr:
         }
 
         url = self.urlGen(api.rest, data, self.signCall(data))
-        resultat = self.getResponse(url)
-#        return self.getResponse(url)
-        if resultat:
-            return resultat
-        else:
-            print "ERROR"
-            return None
+        return self.getResponse(url)
 
     def people_get_photos(self):
         data = {
@@ -2051,7 +2002,6 @@ class Uploadr:
 
    
 
-
 print("--------- Start time: " + time.strftime("%c") + " ---------")
 if __name__ == "__main__":
     '''
@@ -2066,20 +2016,12 @@ if __name__ == "__main__":
     '''
     # Ensure that only once instance of this script is running
 
-
-
-
     global args
     args = config.build_options()
     upgrade_service = config.UpgradeService(args)
 #    print "args", args.config
     if not os.path.exists(args.config):
-        print "args", args.config
         sys.exit()
-    logname = time.strftime("%Y%m%d_%H%M%S")
-    logpathname = os.path.join(os.path.dirname(sys.argv[0]), logname + ".err")
-    logging.basicConfig(filename=logpathname, level=logging.INFO)
-    logging.getLogger("upload.py")
 
 #    parser = argparse.ArgumentParser(description='Upload files to Flickr.')
 #    parser.add_argument('-d', '--daemon', action='store_true',
@@ -2177,10 +2119,5 @@ if __name__ == "__main__":
             flick.createSetsType()
         flick.createSets()
         flick.print_stat()
-
-#remove logg file if empty
-if os.path.getsize(logpathname) == 0:
-        print "Remove " + logpathname + " is empty"
-        os.remove(logpathname)
 
 print("--------- End time: " + time.strftime("%c") + " ---------")
