@@ -1,8 +1,0 @@
-0000000000000000000000000000000000000000 483df749ffbd9a31f47017902d0d471728f16784 bberski <bberski@gmail.com> 1484060292 +0100	clone: from https://github.com/bberski/flickr-uploader.git
-483df749ffbd9a31f47017902d0d471728f16784 55868ce91957b79acc506a2285a0c45fb72a3e73 bberski <bberski@gmail.com> 1484074475 +0100	commit: Test Atom
-55868ce91957b79acc506a2285a0c45fb72a3e73 2a98ee49626cc114cd57c0c926093ec1c099964b bberski <bberski@gmail.com> 1484095308 +0100	commit: Fix if photo in DB not on Flickr.
-2a98ee49626cc114cd57c0c926093ec1c099964b f590c42787ad7cdffde1538071604ab433aa9a9e bberski <bberski@gmail.com> 1484166442 +0100	commit: Added to upload.ini
-f590c42787ad7cdffde1538071604ab433aa9a9e 3585c4fd698af35aee17c5f0eb753c1d65540517 bberski <bberski@gmail.com> 1484167490 +0100	commit: Changed row to file...
-3585c4fd698af35aee17c5f0eb753c1d65540517 e7e7d81025acd113871c76ead46d94cb710f2ea2 bberski <bberski@gmail.com> 1484168496 +0100	commit: Add print controll.
-e7e7d81025acd113871c76ead46d94cb710f2ea2 e9593365a350b2b4ef7096363ccd0a1cbb68bc2a bberski <bberski@gmail.com> 1487677010 +0100	commit: Many changes.
-e9593365a350b2b4ef7096363ccd0a1cbb68bc2a 91c0a0ad4cbecc20d9434d05e388c39acbe2f4b8 bberski <bberski@bberski-Yosemite.local> 1487693858 +0100	commit: add pyexiftool
