@@ -154,6 +154,7 @@ def configfileread():
     global TITLE
     global DESCRIPTION
     global TAGS
+    global MD5DB
     
 
 #    try:
@@ -231,6 +232,7 @@ def configfileread():
     ppprint("args.REMOVE_IGNORED")
     ppprint("args.MAX_UPLOADFILES")
     ppprint("args.ALBUM")
+    ppprint("args.MD5DB")
 
 
 
@@ -271,6 +273,7 @@ def configfileread():
     REMOVE_IGNORED=args.REMOVE_IGNORED
     MAX_UPLOADFILES=args.MAX_UPLOADFILES
     ALBUM=args.ALBUM
+    MD5DB=args.MD5DB
 
     '''
     FILES_DIR = args.FILES_DIR
@@ -685,16 +688,51 @@ class Uploadr:
                     success = self.deleteFile(row, cur)
         print("*****Completed deleted files*****")
 
+
+    def photos_create_dict_checksum(self, infile):
+        file_checksum = self.md5Checksum(infile)
+        if file_checksum:
+            return (file_checksum, infile)
+
+    def photos_create_md5_checksum(self, infile):
+        file_checksum = self.md5Checksum(infile)
+        if file_checksum:
+            return file_checksum
+
     def photos_search_checksum(self, infile):
         file_checksum = self.md5Checksum(infile)
-        print "Search on Flickr:"+ infile +" md5Checksum:"+ file_checksum
         search = self.photos_search(file_checksum)
+#        print "search", search
         if search:
             if int(search["photos"]["total"]) > 0:
-    #            print "Finns på Flickr"
+                if MD5DB:
+                    #Fixa Set/Album
+                    file_id = search["photos"]["photo"][0]["id"]
+                    file_info = self.photos_getallcontexts(file_id)
+                    if 'set' in file_info.keys():
+                        photo_set = file_info["set"]
+                    if photo_set:
+                        #Borde fixa att välja största id set/album, 0 verkar vara den sist skapade.
+                        set_id = photo_set[0]["id"]
+                        set_name = photo_set[0]["title"]
+                    file = infile
+                    last_modified = os.stat(file).st_mtime;
+                    set_id = photo_set[0]["id"]
+                    set_name = photo_set[0]["title"]
+                    con = lite.connect(DB_PATH)
+                    with con:
+                        cur = con.cursor()
+                        cur.execute(
+                        'INSERT INTO files (files_id, path, set_id, md5, last_modified, tagged) VALUES (?, ?, ?, ?, ?, 1)',
+                            (file_id, file, set_id, file_checksum, last_modified))
+                        print("OK on Flickr" + file + " add in DB to set "+ set_name)
+#                print "On Flickr"
+                file_name = search["photos"]["photo"][0]["title"]
+                print "Search on Flickr:"+ infile +" md5Checksum:"+ file_checksum + " = On Flickr img:" + file_name
                 return None
             else:
-    #            print "Finns INTE på Flickr"
+                print "Search on Flickr:"+ infile +" md5Checksum:"+ file_checksum + " = Not on Flickr" 
+#                print "Not on Flickr"
                 return infile
         else:
             logging.info("---PHOTO SEARCH CHECKSUM ERROR---")
@@ -737,7 +775,6 @@ class Uploadr:
                 cur.execute("SELECT path FROM files")
                 existingMedia = set(file[0] for file in cur.fetchall())
                 changedMedia = set(allMedia) - existingMedia
-
         changedMedia_count = len(changedMedia)
         if MAX_UPLOADFILES:
             self.Media_count = int(MAX_UPLOADFILES)
@@ -760,7 +797,20 @@ class Uploadr:
 #        except urllib2.URLError:
 #            sys.stderr.write("Error: system at %s not responding\n" % self.url)
 #            sys.exit(1)
-            
+                if MD5DB:
+                    import itertools
+                    resultat_dict = dict(self.pool.map(self.photos_create_dict_checksum, changedMedia))
+                    resultat_md5 = self.pool.map(self.photos_create_md5_checksum, changedMedia)
+                    con = lite.connect(DB_PATH)
+                    with con:
+                        cur = con.cursor()
+                        cur.execute("SELECT md5 FROM files")
+                        dbmd5Media = set(file[0] for file in cur.fetchall())
+                        changedmd5Media = set(resultat_md5) - dbmd5Media
+                    new = [resultat_dict[x] for x in changedmd5Media]
+                    changedMedia = new
+
+                print "Number of new:", len(changedMedia)
                 resultat = self.pool.map(self.photos_search_checksum, changedMedia)
                 resultat = filter(None, resultat)
                 self.pool.close() #we are not adding any more processes
@@ -783,17 +833,11 @@ class Uploadr:
             for i, file in enumerate(changedMedia):
                 print("-"*100)
                 success = self.uploadFile(file)
-#                print "S", success
-#                print "UPLOADFILE", success
                 if DRIP_FEED and success and i != changedMedia_count - 1:
                     print("Waiting " + str(DRIP_TIME) + " seconds before next upload")
                     time.sleep(DRIP_TIME)
                 if success == "success":
                     count = count + 1;
-#                if (success  == False):
-#                    print "AAA"
-#                    changedMedia.remove(file);
-#                    break
                 #Om MAX_UPLOADFILES uppnått
                 if (success  == "Stop"):
                     count = count + 1;

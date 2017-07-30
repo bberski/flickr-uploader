@@ -116,6 +116,11 @@ class Options:
                             dest="FILES_DIR",
                             help='Dir where images are')
 
+        self.parser.add_argument('-md5db', '--not_check_md5_db', action='store_false',
+                            dest="MD5DB",
+                            help='Not match md5 again db')
+
+
         self.options = self.parser.parse_args()
 #        print "repo-branch from command line is: {}".format(self.options.repo_branch)
 
