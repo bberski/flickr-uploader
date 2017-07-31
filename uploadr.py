@@ -816,8 +816,11 @@ class Uploadr:
                 resultat = sorted(resultat)
 
                 if MAX_UPLOADFILES:
-                    self.Media_count = int(MAX_UPLOADFILES)
-                    resultat = resultat[0:int(MAX_UPLOADFILES)]
+                    if len(resultat) < int(MAX_UPLOADFILES):
+                        self.Media_count = len(resultat)
+                    else:
+                        self.Media_count = int(MAX_UPLOADFILES)
+                    resultat = resultat[0:int(self.Media_count)]
                 else:
                     self.Media_count = len(resultat)
 
@@ -863,7 +866,10 @@ class Uploadr:
             changedMedia = filter(None, resultat)
 
             if MAX_UPLOADFILES:
-                self.Media_count = int(MAX_UPLOADFILES)
+                if len(changedMedia) < int(MAX_UPLOADFILES):
+                    self.Media_count = len(changedMedia)
+                else:
+                    self.Media_count = int(MAX_UPLOADFILES)
             else:
                 self.Media_count = len(changedMedia)
 
@@ -2111,6 +2117,8 @@ class Uploadr:
         return self.getResponse(url)
 
     def print_stat(self):
+        print("-"*100)
+        print "Total uploading: ", self.Media_count
         con = lite.connect(DB_PATH)
         con.text_factory = str
         with con:
