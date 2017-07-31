@@ -776,10 +776,6 @@ class Uploadr:
                 existingMedia = set(file[0] for file in cur.fetchall())
                 changedMedia = set(allMedia) - existingMedia
         changedMedia_count = len(changedMedia)
-        if MAX_UPLOADFILES:
-            self.Media_count = int(MAX_UPLOADFILES)
-        else:
-            self.Media_count = len(changedMedia)
 
         print("Found " + str(changedMedia_count) + " files")
 #Måste nog flytta CHECK_LOCAL_MD5CHECKSUM innan process kontroll
@@ -798,7 +794,7 @@ class Uploadr:
 #            sys.stderr.write("Error: system at %s not responding\n" % self.url)
 #            sys.exit(1)
                 if MD5DB:
-                    import itertools
+                    print "*****Check md5 against DB*****"
                     resultat_dict = dict(self.pool.map(self.photos_create_dict_checksum, changedMedia))
                     resultat_md5 = self.pool.map(self.photos_create_md5_checksum, changedMedia)
                     con = lite.connect(DB_PATH)
@@ -818,8 +814,13 @@ class Uploadr:
                 if CHECK_LOCAL_MD5CHECKSUM:
                     resultat = self.check_local_duplicate_checksum(resultat)
                 resultat = sorted(resultat)
+
                 if MAX_UPLOADFILES:
+                    self.Media_count = int(MAX_UPLOADFILES)
                     resultat = resultat[0:int(MAX_UPLOADFILES)]
+                else:
+                    self.Media_count = len(resultat)
+
                 self.pool = ThreadPool(processes=int(PROCESSES))
                 success = self.pool.map(self.uploadFile, resultat)
                 self.pool.close() #we are not adding any more processes
@@ -829,6 +830,43 @@ class Uploadr:
                     print("-"*100)
                     return 
         else:
+            if MD5DB:
+                print "*****Check md5 against DB*****"
+                count = 0
+                resultat_dict = {}
+                for i, file in enumerate(changedMedia):
+                    resultat = self.photos_create_dict_checksum(file)
+                    resultat_dict[resultat[0]] = resultat[1]
+
+                count = 0
+                resultat_md5 = []
+                for i, file in enumerate(changedMedia):
+                    resultat = self.photos_create_md5_checksum(file)
+                    resultat_md5.append(resultat)
+
+                con = lite.connect(DB_PATH)
+                with con:
+                    cur = con.cursor()
+                    cur.execute("SELECT md5 FROM files")
+                    dbmd5Media = set(file[0] for file in cur.fetchall())
+                    changedmd5Media = set(resultat_md5) - dbmd5Media
+                new = [resultat_dict[x] for x in changedmd5Media]
+                changedMedia = new
+            print "Number of new:", len(changedMedia)
+
+            count = 0
+            resultat = []
+            for i, file in enumerate(changedMedia):
+                res = self.photos_search_checksum(file)
+                resultat.append(res)
+
+            changedMedia = filter(None, resultat)
+
+            if MAX_UPLOADFILES:
+                self.Media_count = int(MAX_UPLOADFILES)
+            else:
+                self.Media_count = len(changedMedia)
+
             count = 0
             for i, file in enumerate(changedMedia):
                 print("-"*100)
