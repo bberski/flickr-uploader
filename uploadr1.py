@@ -73,6 +73,7 @@ import re
 import ConfigParser
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Process, Manager, Value
+import multiprocessing
 #BBerski
 #from ConfigParser import SafeConfigParser
 import datetime
@@ -691,14 +692,23 @@ class Uploadr:
 
 
     def photos_create_dict_checksum(self, infile):
+#        print infile
         file_checksum = self.md5Checksum(infile)
         if file_checksum:
             return (file_checksum, infile)
 
     def photos_create_md5_checksum(self, infile):
+#        print infile
         file_checksum = self.md5Checksum(infile)
         if file_checksum:
             return file_checksum
+
+    def photos_create_dict_md5_checksum(self, infile):
+        file_checksum = self.md5Checksum(infile)
+        if file_checksum:
+            return (file_checksum, infile), file_checksum
+
+
 
     def photos_search_checksum(self, infile):
         file_checksum = self.md5Checksum(infile)
@@ -740,6 +750,20 @@ class Uploadr:
             logging.info(infile)
             return infile
 
+    def Run(self, foundnr, balance, lock, list_shared, Lista):
+#        print(multiprocessing.current_process())
+        lock.acquire()
+        infile = Lista[balance.value]
+        resultat = self.photos_search_checksum(infile)
+        if resultat == infile:
+            foundnr.value = foundnr.value + 1
+            list_shared.append(infile)
+
+        balance.value = balance.value + 1
+        lock.release()
+    
+
+
 
 
     def check_local_duplicate_checksum(self, inlist):
@@ -754,6 +778,8 @@ class Uploadr:
             duplicatenr = len(inlist)-len(md5List)
             print "Local duplicate file(s): " + str(duplicatenr)
         return md5List
+
+
 
 
     def upload(self):
@@ -788,9 +814,9 @@ class Uploadr:
             if len(changedMedia) > 0:
                 self.pool = ThreadPool(processes=int(PROCESSES))
 
-                manager = Manager()
-                x = manager.Value('i', 0)
-                y = Value('i', 0)
+#                manager = Manager()
+#                x = manager.Value('i', 0)
+#                y = Value('i', 0)
 
 ##              #lägga in try här, fick (error(65, 'No route to host'),)
 #        try:
@@ -800,8 +826,18 @@ class Uploadr:
 #            sys.exit(1)
                 if MD5DB:
                     print "*****Check md5 against DB*****"
+#                    '''
+#                    print "start1"
+                    print("Start time: " + time.strftime("%c"))
                     resultat_dict = dict(self.pool.map(self.photos_create_dict_checksum, changedMedia))
+#                    print "slut1,start2"
                     resultat_md5 = self.pool.map(self.photos_create_md5_checksum, changedMedia)
+                    print("Slut time: " + time.strftime("%c"))
+#                    print "slut2"
+#                    '''
+#                    resultat_dict, resultat_md5 = self.pool.map(self.photos_create_dict_md5_checksum, changedMedia)
+#                    print "1", resultat_dict
+#                    print "2", resultat_md5
                     con = lite.connect(DB_PATH)
                     with con:
                         cur = con.cursor()
@@ -812,11 +848,36 @@ class Uploadr:
                     changedMedia = new
 
                 print "Number of new:", len(changedMedia)
+
+                
+                
+#                sys.exit(1)
+                Range = len(changedMedia)
+                balance = multiprocessing.Value('i', 0)
+                foundnr = multiprocessing.Value('i', 0)
+                manager = multiprocessing.Manager()
+                #shared list
+                list_shared = manager.list()
+                lock = multiprocessing.Lock()
+                groups = [0]*Range
+                for i in xrange(Range):
+                    groups[i] = multiprocessing.Process(target=self.Run, args=(foundnr, balance, lock, list_shared, changedMedia))
+                    groups[i].start()
+                    groups[i].join()
+                    if foundnr.value >= int(MAX_UPLOADFILES):
+                        break
+                resultat = list_shared
+#                print "Lista", list_manager[balance.value:]
+
+                '''
+                sys.exit(1)
+
                 resultat = self.pool.map(self.photos_search_checksum, changedMedia)
                 resultat = filter(None, resultat)
                 self.pool.close() #we are not adding any more processes
                 self.pool.join() #tell it to wait until all threads are done before going on
-#                sys.exit(1)
+                '''
+
 
                 if CHECK_LOCAL_MD5CHECKSUM:
                     resultat = self.check_local_duplicate_checksum(resultat)
@@ -1128,6 +1189,7 @@ class Uploadr:
             print("Check: " + file + "...")
             last_modified = os.stat(file).st_mtime;
             file_checksum = self.md5Checksum(file)
+##Dubblet self.photo_search, finns även i upload
             search_result = self.photos_search(file_checksum)
             photo_set = None
             if int(search_result["photos"]["total"]) > 0 and row is None:
