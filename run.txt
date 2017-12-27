@@ -1,0 +1,2 @@
+python /mnt/Delad/Projekt/Python/flickr-uploader-mv/uploadr.py  -c /mnt/Delad/Projekt/Python/flickr-uploader-mv/.uploadr_mv.ini -fd /mnt/Delad/Bilder/Nya/Bilbao -p 3 -a "2017-Bilbao"
+

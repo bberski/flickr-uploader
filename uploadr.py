@@ -422,6 +422,9 @@ def imageCreateDate(infile_id, inmov, inlast_modified):
         print "EXIF:DateTimeOriginal OK ", inmov
         return True
     if not create_date:
+        create_date = getdate("XMP:DateCreated", inmov)
+        Type = "XMP:DateCreated"
+    if not create_date:
         create_date = getdate("CreateDate", inmov)
         Type = "Create Date"
     if not create_date:
@@ -701,6 +704,7 @@ class Uploadr:
             return file_checksum
 
     def photos_search_checksum(self, infile):
+        photo_set = None
         file_checksum = self.md5Checksum(infile)
         search = self.photos_search(file_checksum)
 #        print "search", search
@@ -718,8 +722,15 @@ class Uploadr:
                         set_name = photo_set[0]["title"]
                     file = infile
                     last_modified = os.stat(file).st_mtime;
-                    set_id = photo_set[0]["id"]
-                    set_name = photo_set[0]["title"]
+                    if photo_set:
+                        set_id = photo_set[0]["id"]
+                        set_name = photo_set[0]["title"]
+                    else:
+                        #Oj bilden är inte med något Album
+                        print "No Album set to image"
+                        set_id = 0
+                        set_name = ""
+                        
                     con = lite.connect(DB_PATH)
                     with con:
                         cur = con.cursor()
@@ -1129,7 +1140,7 @@ class Uploadr:
             last_modified = os.stat(file).st_mtime;
             file_checksum = self.md5Checksum(file)
             search_result = self.photos_search(file_checksum)
-            photo_set = None
+#            photo_set = None
             if int(search_result["photos"]["total"]) > 0 and row is None:
                 print "Photo/Movie already exist on Flickr: "+ file +" md5="+ file_checksum +" not in DB, fixit"
                 #Fixa Set/Album
